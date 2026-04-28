@@ -19,6 +19,7 @@ function UsuariosManagement() {
   const [formDataUsuario, setFormDataUsuario] = useState({
     nombre_usuario: "",
     correo: "",
+    numero_documento: "",
     contraseña: "",
     roles: [],
     estado: true,
@@ -77,6 +78,7 @@ function UsuariosManagement() {
         const usuarioData = {
           nombre_usuario: formDataUsuario.nombre_usuario,
           correo: formDataUsuario.correo,
+          numero_documento: Number(formDataUsuario.numero_documento),
           roles: formDataUsuario.roles,
           estado: formDataUsuario.estado
         };
@@ -90,6 +92,7 @@ function UsuariosManagement() {
         const usuarioData = {
           nombre_usuario: formDataUsuario.nombre_usuario,
           correo: formDataUsuario.correo,
+          numero_documento: Number(formDataUsuario.numero_documento),
           contraseña: formDataUsuario.contraseña,
           roles: formDataUsuario.roles,
           estado: formDataUsuario.estado
@@ -114,6 +117,7 @@ function UsuariosManagement() {
     setFormDataUsuario({
       nombre_usuario: usuario.nombre_usuario,
       correo: usuario.correo,
+      numero_documento: usuario.numero_documento || "",
       contraseña: "",
       roles: usuario.roles ? usuario.roles.map(rol => rol.nombre) : [],
       estado: usuario.estado,
@@ -161,6 +165,7 @@ function UsuariosManagement() {
     setFormDataUsuario({
       nombre_usuario: "",
       correo: "",
+      numero_documento: "",
       contraseña: "",
       roles: [],
       estado: true,
@@ -399,6 +404,19 @@ function UsuariosManagement() {
                   </div>
                   <div className="row g-4 mb-4">
                     <div className="col-md-6">
+                      <label className="form-label fw-bold text-primary">Número de Documento</label>
+                      <input
+                        type="number"
+                        className="form-control form-control-lg"
+                        name="numero_documento"
+                        value={formDataUsuario.numero_documento}
+                        onChange={handleInputChange}
+                        required
+                        min="1"
+                        placeholder="123456789"
+                      />
+                    </div>
+                    <div className="col-md-6">
                       <label className="form-label fw-bold text-primary">Contraseña</label>
                       <input
                         type="password"
@@ -410,6 +428,8 @@ function UsuariosManagement() {
                         placeholder={editingUsuario ? "Dejar en blanco para mantener" : "Mínimo 6 caracteres"}
                       />
                     </div>
+                  </div>
+                  <div className="row g-4 mb-4">
                     <div className="col-md-6">
                       <label className="form-label fw-bold text-primary">Estado</label>
                       <select

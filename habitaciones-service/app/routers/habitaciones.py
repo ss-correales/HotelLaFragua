@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import crud, schemas
 from ..security import verify_token
-import urllib.request
-import urllib.error
+from dotenv import load_dotenv
 
 router = APIRouter(prefix="/api/habitaciones", tags=["Habitaciones"])
+load_dotenv()
+
+CLIENTES_SERVICE_URL = os.getenv("CLIENTES_SERVICE_URL", "http://localhost:8081")
+INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "hotel_lafragua_internal")
 
 
 @router.get("", response_model=list[schemas.Habitacion])
@@ -55,15 +60,21 @@ def eliminar_habitacion(numero_habitacion: int, db: Session = Depends(get_db), c
 # Operaciones de ocupación
 # -----------------------------
 
-def validar_cliente_existente(id_cliente: int):
-    # Ajusta URL según la ruta actual del microservicio de clientes
-    url = f"http://localhost:8081/clientes/documento/{id_cliente}"
+def validar_cliente_existente(id_cliente: int, authorization: str | None = None):
+    headers = {"X-Internal-Token": INTERNAL_SERVICE_TOKEN}
+    if authorization:
+        headers["Authorization"] = authorization
+
     try:
-        with urllib.request.urlopen(url, timeout=3) as response:
-            return response.status == 200
-    except urllib.error.HTTPError:
+        response = httpx.get(
+            f"{CLIENTES_SERVICE_URL}/clientes/documento/{id_cliente}",
+            headers=headers,
+            timeout=3,
+        )
+        return response.status_code == 200
+    except httpx.HTTPStatusError:
         return False
-    except urllib.error.URLError:
+    except httpx.RequestError:
         return False
 
 
@@ -78,9 +89,14 @@ def listar_ocupaciones_activas(db: Session = Depends(get_db), current_user = Dep
 
 
 @router.post("/ocupaciones", response_model=schemas.OcupacionHabitacion)
-def crear_ocupacion(ocupacion: schemas.OcupacionHabitacionCreate, db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def crear_ocupacion(
+    ocupacion: schemas.OcupacionHabitacionCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(verify_token),
+):
     # Verificar cliente en microservicio de clientes
-    if not validar_cliente_existente(ocupacion.identificacion_cliente):
+    if not validar_cliente_existente(ocupacion.identificacion_cliente, request.headers.get("authorization")):
         raise HTTPException(status_code=400, detail="Cliente no válido")
 
     # Verificar disponibilidad de habitación
@@ -112,7 +128,7 @@ def finalizar_ocupacion(id_ocupacion: int, data: schemas.OcupacionHabitacionUpda
     # Liberar habitación en caso de cierre
     habitacion = db.query(models.Habitacion).filter(models.Habitacion.numero_habitacion == ocupacion.numero_habitacion).first()
     if habitacion:
-        habitacion.estado = 'LIBRE'
+        habitacion.estado = 'Libre'
         db.commit()
         db.refresh(habitacion)
 

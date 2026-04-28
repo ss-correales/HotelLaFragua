@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import crud, schemas
@@ -24,21 +24,24 @@ def obtener_reserva(id_reserva: int, db: Session = Depends(get_db), current_user
 
 @router.post("/", response_model=schemas.ReservaResponse)
 def crear_reserva(reserva: schemas.ReservaCreate,
+                  request: Request,
                   db=Depends(get_db),
                   current_user = Depends(verify_token)):
-    nueva = crud.crear_reserva(db, reserva)
+    nueva = crud.crear_reserva(db, reserva, request.headers.get("authorization"))
     return nueva
 
 
 @router.post("/{id_reserva}/checkin", response_model=schemas.ReservaResponse)
 def checkin_reserva(id_reserva: int,
+                    request: Request,
                     db=Depends(get_db),
                     current_user = Depends(verify_token)):
-    return crud.checkin_reserva(db, id_reserva)
+    return crud.checkin_reserva(db, id_reserva, request.headers.get("authorization"))
 
 
 @router.post("/{id_reserva}/checkout", response_model=schemas.ReservaResponse)
 def checkout_reserva(id_reserva: int,
+                     request: Request,
                      db=Depends(get_db),
                      current_user = Depends(verify_token)):
-    return crud.checkout_reserva(db, id_reserva)
+    return crud.checkout_reserva(db, id_reserva, request.headers.get("authorization"))

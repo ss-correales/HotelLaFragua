@@ -1,10 +1,5 @@
 from sqlalchemy.orm import Session
 from .models import Factura
-import requests
-from fastapi import HTTPException
-from datetime import date
-
-RESERVAS_SERVICE_URL = "http://localhost:8083"
 
 def crear_factura(db: Session, factura):
     nueva = Factura(

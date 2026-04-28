@@ -28,6 +28,7 @@ class Usuario(Base):
     contraseña_hash = Column(String(255), nullable=False)
     estado = Column(Boolean, default=True, nullable=False)
     fecha_creacion = Column('fecha_creacin', DateTime, server_default='CURRENT_TIMESTAMP', nullable=True)
+    numero_documento = Column(Integer, nullable=False)
 
     # Relación con roles
     roles = relationship("Rol", secondary=usuario_rol, back_populates="usuarios")

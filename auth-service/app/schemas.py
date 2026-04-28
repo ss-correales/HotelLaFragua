@@ -17,6 +17,7 @@ class Rol(RolBase):
 class UsuarioBase(BaseModel):
     nombre_usuario: str
     correo: str
+    numero_documento: int
 
 class UsuarioCreate(UsuarioBase):
     contraseña: str  # La contraseña sin hash para crear
@@ -38,5 +39,6 @@ class UsuarioResponse(UsuarioBase):
 class UsuarioUpdate(BaseModel):
     nombre_usuario: Optional[str] = None
     correo: Optional[str] = None
+    numero_documento: Optional[int] = None
     estado: Optional[bool] = None
     roles: Optional[List[str]] = None

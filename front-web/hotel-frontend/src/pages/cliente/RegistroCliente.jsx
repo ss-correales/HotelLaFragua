@@ -80,6 +80,7 @@ function RegistroCliente() {
       const authResponse = await axios.post("http://localhost:8086/auth/register", {
         nombre_usuario: nombreUsuarioGenerado,
         correo,
+        numero_documento: Number(numeroDocumento),
         contraseña: password,
         roles: ["cliente"] // Asignar rol cliente automáticamente
       });

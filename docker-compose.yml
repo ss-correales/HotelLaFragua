@@ -1,0 +1,211 @@
+# ============================================================
+# DOCKER COMPOSE - Hotel La Fragua ERP
+# Servicios: Auth, Clientes, Habitaciones, Reservas, Facturación, Empleados, Frontend
+# ============================================================
+
+services:
+  # ============================================================
+  # AUTH SERVICE (Puerto 8086)
+  # ============================================================
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: hotel_auth_service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      AUTH_ENABLED: ${AUTH_ENABLED}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: development
+    ports:
+      - "8086:8000"
+    volumes:
+      - ./auth-service:/app
+    networks:
+      - hotel_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ============================================================
+  # CLIENTES SERVICE (Puerto 8081)
+  # ============================================================
+  clientes-service:
+    build:
+      context: ./clientes-service
+      dockerfile: Dockerfile
+    container_name: hotel_clientes_service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      AUTH_ENABLED: ${AUTH_ENABLED}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CLIENTES_SERVICE_URL: http://clientes-service:8000
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: development
+    ports:
+      - "8081:8000"
+    volumes:
+      - ./clientes-service:/app
+    networks:
+      - hotel_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ============================================================
+  # HABITACIONES SERVICE (Puerto 8082)
+  # ============================================================
+  habitaciones-service:
+    build:
+      context: ./habitaciones-service
+      dockerfile: Dockerfile
+    container_name: hotel_habitaciones_service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      AUTH_ENABLED: ${AUTH_ENABLED}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CLIENTES_SERVICE_URL: http://clientes-service:8000
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: development
+    ports:
+      - "8082:8000"
+    volumes:
+      - ./habitaciones-service:/app
+    networks:
+      - hotel_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ============================================================
+  # RESERVAS SERVICE (Puerto 8083)
+  # ============================================================
+  reservas-service:
+    build:
+      context: ./reservas-service
+      dockerfile: Dockerfile
+    container_name: hotel_reservas_service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      AUTH_ENABLED: ${AUTH_ENABLED}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CLIENTES_SERVICE_URL: http://clientes-service:8000
+      HABITACIONES_SERVICE_URL: http://habitaciones-service:8000
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: development
+    ports:
+      - "8083:8000"
+    volumes:
+      - ./reservas-service:/app
+    networks:
+      - hotel_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ============================================================
+  # FACTURACION SERVICE (Puerto 8084)
+  # ============================================================
+  facturacion-service:
+    build:
+      context: ./facturacion-service
+      dockerfile: Dockerfile
+    container_name: hotel_facturacion_service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      RESERVAS_SERVICE_URL: http://reservas-service:8000
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: development
+    ports:
+      - "8084:8000"
+    volumes:
+      - ./facturacion-service:/app
+    networks:
+      - hotel_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ============================================================
+  # EMPLEADOS SERVICE (Puerto 8085)
+  # ============================================================
+  empleados-service:
+    build:
+      context: ./empleados-service
+      dockerfile: Dockerfile
+    container_name: hotel_empleados_service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: development
+    ports:
+      - "8085:8000"
+    volumes:
+      - ./empleados-service:/app
+    networks:
+      - hotel_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ============================================================
+  # FRONTEND - React + Vite (Puerto 5173)
+  # ============================================================
+  frontend:
+    build:
+      context: ./front-web/hotel-frontend
+      dockerfile: Dockerfile
+    container_name: hotel_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8086
+      VITE_AUTH_SERVICE_URL: http://localhost:8086
+      VITE_CLIENTES_SERVICE_URL: http://localhost:8081
+      VITE_HABITACIONES_SERVICE_URL: http://localhost:8082
+      VITE_RESERVAS_SERVICE_URL: http://localhost:8083
+    volumes:
+      - ./front-web/hotel-frontend/src:/app/src
+    networks:
+      - hotel_network
+    command: npm run dev
+
+# ============================================================
+# REDES
+# ============================================================
+networks:
+  hotel_network:
+    driver: bridge
