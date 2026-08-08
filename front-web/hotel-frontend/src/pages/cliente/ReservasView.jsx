@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { crearReserva, getHabitacionesDisponibles } from "../../services/reservasApi";
 import DatePicker from "react-datepicker";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
@@ -14,6 +15,7 @@ registerLocale('es', es);
 setDefaultLocale('es');
 
 function ReservasView() {
+  const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
@@ -31,6 +33,14 @@ function ReservasView() {
   const [loading, setLoading] = useState(false);
   const [showAvailable, setShowAvailable] = useState(false);
   const [reservaSuccess, setReservaSuccess] = useState(false);
+
+  // Preseleccionar el tipo de habitación si venimos de un botón "Reservar Ahora"
+  useEffect(() => {
+    const tipo = location.state?.tipo_habitacion;
+    if (tipo) {
+      setFormData((prev) => ({ ...prev, tipo_habitacion: tipo }));
+    }
+  }, [location.state]);
 
   // Verificar autenticación y cargar datos del cliente
   useEffect(() => {

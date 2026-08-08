@@ -65,6 +65,9 @@
   background: #a67c52;
   color: #fff;
   text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
   padding: 14px 36px;
   border-radius: 30px;
   font-size: 18px;

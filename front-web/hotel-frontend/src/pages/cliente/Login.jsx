@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AUTH_API_BASE_URL } from "../../services/config.js";
 import { getClientePorCorreo } from "../../services/clientesApi";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -11,6 +11,10 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  // Si llegamos aquí desde un botón "Reservar", continuamos a esa página tras el login
+  const redirectTo = location.state?.redirectTo;
+  const tipoHabitacion = location.state?.tipo_habitacion;
 
   const iniciarSesion = async (e) => {
     e.preventDefault();
@@ -52,7 +56,12 @@ function Login() {
       }
       
       alert("¡Sesión iniciada correctamente!");
-      navigate("/perfil");
+      // Si veníamos de "Reservar", continuamos allí con el tipo preseleccionado
+      if (redirectTo) {
+        navigate(redirectTo, { state: { tipo_habitacion: tipoHabitacion } });
+      } else {
+        navigate("/perfil");
+      }
 
     } catch (error) {
       console.error("Error en login:", error);

@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 /**
@@ -10,6 +10,18 @@ import "./Home.css";
 const heroImg = "/assets/hotel/inicio-hero.png";
 
 function ClienteHome() {
+  const navigate = useNavigate();
+
+  // Reservar desde el inicio: exige iniciar sesión primero
+  const handleReservar = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login", { state: { redirectTo: "/reservas" } });
+      return;
+    }
+    navigate("/reservas");
+  };
+
   return (
     <div className="cliente-home">
       {/* HERO con imagen grande + scroll infinito (parallax + zoom continuo) */}
@@ -21,9 +33,9 @@ function ClienteHome() {
         <div className="hero-content">
           <h1>Bienvenido a La Fragua</h1>
           <p>Disfruta tu estadía con el máximo confort y estilo</p>
-          <Link to="/reservas" className="btn-gold">
+          <button type="button" className="btn-gold" onClick={handleReservar}>
             Reservar Ahora
-          </Link>
+          </button>
         </div>
       </section>
     </div>
