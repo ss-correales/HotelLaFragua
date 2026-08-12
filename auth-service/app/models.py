@@ -25,6 +25,7 @@ class Usuario(Base):
     id_usuario = Column(Integer, primary_key=True, autoincrement=True, index=True)
     nombre_usuario = Column(String(50), unique=True, nullable=False, index=True)
     correo = Column(String(100), unique=True, nullable=False, index=True)
+    numero_documento = Column(Integer, nullable=False)
     contraseña_hash = Column(String(255), nullable=False)
     estado = Column(Boolean, default=True, nullable=False)
     fecha_creacion = Column('fecha_creacin', DateTime, server_default='CURRENT_TIMESTAMP', nullable=True)

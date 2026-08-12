@@ -17,6 +17,7 @@ class Rol(RolBase):
 class UsuarioBase(BaseModel):
     nombre_usuario: str
     correo: str
+    numero_documento: int
 
 class UsuarioCreate(UsuarioBase):
     contraseña: str  # La contraseña sin hash para crear
