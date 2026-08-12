@@ -1,18 +1,9 @@
 import axios from "axios";
 import { HABITACIONES_API_BASE_URL } from "./config.js";
 
+// Las habitaciones se muestran sin token: pensadas como catálogo público
 const habitacionesApi = axios.create({
   baseURL: HABITACIONES_API_BASE_URL,
-});
-
-habitacionesApi.interceptors.request.use(config => {
-  // Las habitaciones son públicas, no requieren token
-  // Comentado para que las habitaciones sean visibles para todos
-  // const token = localStorage.getItem("token");
-  // if (token) {
-  //   config.headers.Authorization = `Bearer ${token}`;
-  // }
-  return config;
 });
 
 export const getHabitaciones = async () => {
