@@ -349,13 +349,13 @@ function UsuariosManagement() {
                     usuario.correo.toLowerCase().includes(searchUsuario.toLowerCase()) ||
                     usuario.roles.some(rol => rol.nombre.toLowerCase().includes(searchUsuario.toLowerCase()))
                   ).map((usuario) => (
-                    <tr key={usuario.id_usuario}>
+                    <tr key={usuario.id_usuario} className={!usuario.estado ? "table-secondary" : ""}>
                       <td>{usuario.id_usuario}</td>
                       <td>
                         <strong>{usuario.nombre_usuario}</strong>
                       </td>
                       <td>{usuario.correo}</td>
-                      <td>{usuario.numero_identificacion || '-'}</td>
+                      <td>{usuario.numero_documento || '-'}</td>
                       <td>
                         <div className="d-flex align-items-center">
                           <span className={`badge me-2 d-flex align-items-center`} style={{

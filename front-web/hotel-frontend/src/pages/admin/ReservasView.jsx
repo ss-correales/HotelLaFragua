@@ -279,7 +279,7 @@ function ReservasView() {
               <tbody>
                 {filteredReservas.length > 0 ? (
                   filteredReservas.map((reserva) => (
-                    <tr key={reserva.id_reserva}>
+                    <tr key={reserva.id_reserva} className={reserva.estado === "Finalizada" ? "table-secondary" : ""}>
                       <td className="align-middle">
                         <span className="fw-bold">#{reserva.id_reserva}</span>
                       </td>

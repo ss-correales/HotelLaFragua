@@ -259,7 +259,7 @@ function ClientesView() {
                       </td>
                       <td>
                         <span className="text-muted">
-                          Sin fecha (corregir backend)
+                          {cliente.fecha_registro ? new Date(cliente.fecha_registro).toLocaleDateString() : '-'}
                         </span>
                       </td>
                       <td>
