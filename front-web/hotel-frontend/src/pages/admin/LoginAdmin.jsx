@@ -21,131 +21,51 @@ function LoginAdmin() {
         contraseña: password
       });
 
-      console.log("Respuesta del backend:", response.data);
-      
       const token = response.data.access_token;
-      
+
       if (!token) {
         alert("Error en el login de administrador. Intenta nuevamente.");
         return;
       }
 
       // Decodificar el JWT para obtener información del usuario
+      let decodedPayload;
       try {
-        // El JWT tiene 3 partes: header.payload.signature
         const payload = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payload));
-        
-        console.log("Payload del JWT:", decodedPayload);
-        
-        // El payload debería contener información del usuario incluyendo roles
-        const user = {
-          id: decodedPayload.sub || decodedPayload.id,
-          correo: decodedPayload.correo || decodedPayload.email,
-          roles: decodedPayload.roles || []
-        };
-        
-        console.log("Usuario decodificado:", user);
-        console.log("Roles del usuario:", user?.roles);
-        
-        // Verificar que el usuario tenga rol de administrador
-        const hasAdminRole = Array.isArray(user.roles) && user.roles.some((rol) => {
-          if (typeof rol === "string") return rol === "Administrador";
-          return rol?.nombre === "Administrador" || rol?.name === "Administrador";
-        });
-
-        if (!hasAdminRole) {
-          alert("Acceso denegado. Solo los administradores pueden acceder a este panel.");
-          return;
-        }
-
-        // Guardar en localStorage y sessionStorage como respaldo
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-        localStorage.setItem("adminUser", JSON.stringify(user));
-        
-        sessionStorage.setItem("adminToken", token);
-        sessionStorage.setItem("adminUser", JSON.stringify(user));
-        
-        // También guardar en una variable global como respaldo adicional
-        window.currentUser = user;
-        window.currentToken = token;
-        
-        console.log("LoginAdmin - Guardado en localStorage y sessionStorage:");
-        console.log("  - Token:", token.substring(0, 20) + "...");
-        console.log("  - User:", JSON.stringify(user));
-        
-        // Verificar que se guardaron correctamente
-        const savedToken = localStorage.getItem("token");
-        const savedUser = localStorage.getItem("user");
-        console.log("LoginAdmin - Verificación inmediata:");
-        console.log("  - Token guardado en localStorage:", !!savedToken);
-        console.log("  - User guardado en localStorage:", !!savedUser);
-        console.log("  - Usuario en variable global:", !!window.currentUser);
-        
-        // Disparar evento personalizado para sincronizar AuthProvider
-        const storageEvent = new CustomEvent('localStorageUpdated', {
-          detail: { token, user }
-        });
-        window.dispatchEvent(storageEvent);
-        
-        console.log("LoginAdmin - Evento de sincronización disparado");
-        
-        alert("¡Sesión de administrador iniciada correctamente!");
-        
-        // Navegar inmediatamente sin esperar
-        navigate("/admin");
-
-      } catch (decodeError) {
-        console.error("Error decodificando JWT:", decodeError);
-        
-        // Si falla la decodificación, intentar obtener el usuario desde endpoints
-        const endpoints = [
-          `${AUTH_API_BASE_URL}/users/me`,
-          `${AUTH_API_BASE_URL}/usuarios/me`,
-          `${AUTH_API_BASE_URL}/auth/me`,
-          `${AUTH_API_BASE_URL}/user`
-        ];
-        
-        let user = null;
-        
-        for (const endpoint of endpoints) {
-          try {
-            console.log(`Intentando obtener usuario desde: ${endpoint}`);
-            const userResponse = await axios.get(endpoint, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            user = userResponse.data;
-            console.log(`Éxito obteniendo usuario desde: ${endpoint}`, user);
-            break;
-          } catch (endpointError) {
-            console.log(`Error con ${endpoint}:`, endpointError.response?.status);
-            continue;
-          }
-        }
-        
-        if (!user) {
-          alert("No se pudo verificar el rol del usuario. Contacta al administrador del sistema.");
-          return;
-        }
-        
-        // Verificar que el usuario tenga rol de administrador
-        if (!user.roles || !user.roles.some(rol => rol.nombre === 'Administrador')) {
-          alert("Acceso denegado. Solo los administradores pueden acceder a este panel.");
-          return;
-        }
-
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-        
-        alert("¡Sesión de administrador iniciada correctamente!");
-        navigate("/admin");
+        decodedPayload = JSON.parse(atob(payload));
+      } catch {
+        alert("No se pudo verificar el rol del usuario. Contacta al administrador del sistema.");
+        return;
       }
 
+      const user = {
+        id: decodedPayload.sub || decodedPayload.id,
+        correo: decodedPayload.correo || decodedPayload.email,
+        roles: decodedPayload.roles || []
+      };
+
+      const hasAdminRole = Array.isArray(user.roles) && user.roles.some((rol) => {
+        if (typeof rol === "string") return rol === "Administrador";
+        return rol?.nombre === "Administrador" || rol?.name === "Administrador";
+      });
+
+      if (!hasAdminRole) {
+        alert("Acceso denegado. Solo los administradores pueden acceder a este panel.");
+        return;
+      }
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Disparar evento personalizado para sincronizar AuthProvider
+      window.dispatchEvent(new CustomEvent('localStorageUpdated', {
+        detail: { token, user }
+      }));
+
+      alert("¡Sesión de administrador iniciada correctamente!");
+      navigate("/admin");
+
     } catch (error) {
-      console.error("Error en login de admin:", error);
       alert(error.response?.data?.message || "Credenciales de administrador incorrectas");
     } finally {
       setLoading(false);
