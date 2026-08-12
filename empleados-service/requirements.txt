@@ -8,3 +8,4 @@ python-dotenv
 cryptography
 requests
 apscheduler
+python-jose
