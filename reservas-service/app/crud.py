@@ -49,9 +49,12 @@ def contar_reservas_solapadas(db: Session, tipo_habitacion: str, fecha_inicio: d
     ).count()
 
 
-def crear_reserva(db: Session, reserva):
+def crear_reserva(db: Session, reserva, canal: str = "Online"):
     if reserva.fecha_inicio >= reserva.fecha_fin:
         raise HTTPException(status_code=400, detail="La fecha de inicio debe ser anterior a la fecha de fin")
+
+    if reserva.fecha_inicio < date.today():
+        raise HTTPException(status_code=400, detail="La fecha de inicio no puede ser anterior a la fecha de creación de la reserva")
 
     if not verificar_cliente(reserva.identificacion_cliente):
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
@@ -73,6 +76,7 @@ def crear_reserva(db: Session, reserva):
         fecha_inicio=reserva.fecha_inicio,
         fecha_fin=reserva.fecha_fin,
         estado="Pendiente",
+        canal=canal,
     )
 
     db.add(nueva_reserva)

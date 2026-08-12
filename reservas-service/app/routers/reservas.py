@@ -26,7 +26,9 @@ def obtener_reserva(id_reserva: int, db: Session = Depends(get_db), current_user
 def crear_reserva(reserva: schemas.ReservaCreate,
                   db=Depends(get_db),
                   current_user = Depends(verify_token)):
-    nueva = crud.crear_reserva(db, reserva)
+    roles = current_user.get("roles", []) if isinstance(current_user, dict) else []
+    canal = "Presencial" if any(r in roles for r in ("Administrador", "Empleado")) else "Online"
+    nueva = crud.crear_reserva(db, reserva, canal=canal)
     return nueva
 
 

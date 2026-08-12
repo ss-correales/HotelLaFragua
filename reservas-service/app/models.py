@@ -13,6 +13,7 @@ class Reserva(Base):
     fecha_fin = Column(Date, nullable=False)
     estado = Column(Enum('Pendiente', 'Confirmada', 'Cancelada', 'Finalizada', name='estado_reserva_enum'), nullable=False, default='Pendiente')
     fecha_creacion = Column(DateTime, default=datetime.now, nullable=False)
+    canal = Column(Enum('Online', 'Presencial', name='canal_reserva_enum'), nullable=True)
 
     __table_args__ = (
         CheckConstraint('fecha_inicio < fecha_fin', name='chk_fechas_validas'),

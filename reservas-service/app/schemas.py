@@ -25,6 +25,7 @@ class ReservaResponse(ReservaBase):
     numero_habitacion: Optional[int] = None
     estado: Literal["Pendiente", "Confirmada", "Cancelada", "Finalizada"]
     fecha_creacion: datetime
+    canal: Optional[Literal["Online", "Presencial"]] = None
 
     class Config:
         from_attributes = True

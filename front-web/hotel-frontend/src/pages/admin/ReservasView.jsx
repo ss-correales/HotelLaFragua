@@ -272,6 +272,7 @@ function ReservasView() {
                   <th className="border-0">Fecha Inicio</th>
                   <th className="border-0">Fecha Fin</th>
                   <th className="border-0">Estado</th>
+                  <th className="border-0">Canal</th>
                   <th className="border-0">Fecha Creación</th>
                   <th className="border-0">Acciones</th>
                 </tr>
@@ -304,6 +305,11 @@ function ReservasView() {
                       </td>
                       <td className="align-middle">
                         {getEstadoBadge(reserva.estado)}
+                      </td>
+                      <td className="align-middle">
+                        <span className={`badge ${reserva.canal === "Presencial" ? "bg-info text-dark" : "bg-primary"}`}>
+                          {reserva.canal || "No disponible"}
+                        </span>
                       </td>
                       <td className="align-middle">
                         <span className="small text-muted">
@@ -458,6 +464,7 @@ function ReservasView() {
                         name="fecha_inicio"
                         value={formDataReserva.fecha_inicio}
                         onChange={handleInputChange}
+                        min={new Date().toISOString().split('T')[0]}
                         required
                       />
                     </div>
@@ -469,6 +476,7 @@ function ReservasView() {
                         name="fecha_fin"
                         value={formDataReserva.fecha_fin}
                         onChange={handleInputChange}
+                        min={formDataReserva.fecha_inicio || new Date().toISOString().split('T')[0]}
                         required
                       />
                     </div>
