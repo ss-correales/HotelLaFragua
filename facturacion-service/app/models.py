@@ -1,16 +1,28 @@
-from sqlalchemy import Column, Integer, Float, String, Date
+from sqlalchemy import Column, Integer, Float, String, Date, ForeignKey
+from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import date
+
 
 class Factura(Base):
     __tablename__ = "facturas"
 
-    id = Column(Integer, primary_key=True, index=True)
-    reserva_id = Column(Integer)
-    cliente_id = Column(Integer)
-    fecha = Column(Date, default=date.today)
-    subtotal = Column(Float)
-    impuestos = Column(Float)
-    total = Column(Float)
-    metodo_pago = Column(String(50))
-    estado = Column(String(20), default="pendiente")
+    id_factura = Column(Integer, primary_key=True, index=True)
+    id_reserva = Column(Integer, nullable=False)
+    total = Column(Float, nullable=False)
+    fecha_emision = Column(Date, default=date.today)
+    estado = Column(String(20), default="Pendiente")
+
+    pagos = relationship("Pago", back_populates="factura")
+
+
+class Pago(Base):
+    __tablename__ = "pagos"
+
+    id_pago = Column(Integer, primary_key=True, index=True)
+    id_factura = Column(Integer, ForeignKey("facturas.id_factura"), nullable=False)
+    metodo_pago = Column(String(50), nullable=False)
+    monto = Column(Float, nullable=False)
+    fecha_pago = Column(Date, default=date.today)
+
+    factura = relationship("Factura", back_populates="pagos")

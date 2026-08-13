@@ -1,21 +1,40 @@
 from pydantic import BaseModel
 from datetime import date
+from typing import List
+
+
+class PagoBase(BaseModel):
+    metodo_pago: str
+    monto: float
+
+
+class PagoCreate(PagoBase):
+    pass
+
+
+class PagoResponse(PagoBase):
+    id_pago: int
+    id_factura: int
+    fecha_pago: date
+
+    class Config:
+        from_attributes = True
+
 
 class FacturaBase(BaseModel):
-    reserva_id: int
-    cliente_id: int
-    subtotal: float
-    impuestos: float
+    id_reserva: int
     total: float
-    metodo_pago: str
-    estado: str = "pendiente"
+    estado: str = "Pendiente"
+
 
 class FacturaCreate(FacturaBase):
     pass
 
+
 class FacturaResponse(FacturaBase):
-    id: int
-    fecha: date
+    id_factura: int
+    fecha_emision: date
+    pagos: List[PagoResponse] = []
 
     class Config:
         from_attributes = True
