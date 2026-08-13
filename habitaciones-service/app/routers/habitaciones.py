@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from ..database import get_db
 from .. import crud, schemas
-from ..security import verify_token
+from ..security import require_admin
 import urllib.request
 import urllib.error
 
@@ -21,26 +21,14 @@ ESTADO_OCUPADA = "Ocupada"
 router = APIRouter(prefix="/api/habitaciones", tags=["Habitaciones"])
 
 
-@router.get("", response_model=list[schemas.Habitacion])
-def listar_habitaciones_sin_slash(db: Session = Depends(get_db)):
-    return crud.get_habitaciones(db)
-
-
 @router.get("/", response_model=list[schemas.Habitacion])
-def listar_habitaciones(db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def listar_habitaciones(db: Session = Depends(get_db)):
+    # Catálogo público: no requiere token, se muestra a cualquier visitante
     return crud.get_habitaciones(db)
-
-
-@router.post("", response_model=schemas.Habitacion)
-def crear_habitacion_sin_slash(habitacion: schemas.HabitacionCreate, db: Session = Depends(get_db)):
-    nueva_habitacion = crud.create_habitacion(db, habitacion)
-    if not nueva_habitacion:
-        raise HTTPException(status_code=400, detail="Habitación con este número ya existe")
-    return nueva_habitacion
 
 
 @router.post("/", response_model=schemas.Habitacion)
-def crear_habitacion(habitacion: schemas.HabitacionCreate, db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def crear_habitacion(habitacion: schemas.HabitacionCreate, db: Session = Depends(get_db), current_user = Depends(require_admin)):
     nueva_habitacion = crud.create_habitacion(db, habitacion)
     if not nueva_habitacion:
         raise HTTPException(status_code=400, detail="Habitación con este número ya existe")
@@ -48,7 +36,7 @@ def crear_habitacion(habitacion: schemas.HabitacionCreate, db: Session = Depends
 
 
 @router.put("/{numero_habitacion}", response_model=schemas.Habitacion)
-def actualizar_habitacion(numero_habitacion: int, habitacion_update: schemas.HabitacionUpdate, db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def actualizar_habitacion(numero_habitacion: int, habitacion_update: schemas.HabitacionUpdate, db: Session = Depends(get_db), current_user = Depends(require_admin)):
     habitacion = crud.update_habitacion(db, numero_habitacion, habitacion_update)
     if not habitacion:
         raise HTTPException(status_code=404, detail="Habitación no encontrada")
@@ -56,7 +44,7 @@ def actualizar_habitacion(numero_habitacion: int, habitacion_update: schemas.Hab
 
 
 @router.delete("/{numero_habitacion}")
-def eliminar_habitacion(numero_habitacion: int, db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def eliminar_habitacion(numero_habitacion: int, db: Session = Depends(get_db), current_user = Depends(require_admin)):
     eliminada = crud.delete_habitacion(db, numero_habitacion)
     if not eliminada:
         raise HTTPException(status_code=404, detail="Habitación no encontrada")
@@ -79,17 +67,17 @@ def validar_cliente_existente(id_cliente: int):
 
 
 @router.get("/ocupaciones", response_model=list[schemas.OcupacionHabitacion])
-def listar_ocupaciones(db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def listar_ocupaciones(db: Session = Depends(get_db), current_user = Depends(require_admin)):
     return crud.get_ocupaciones(db)
 
 
 @router.get("/ocupaciones/activas", response_model=list[schemas.OcupacionHabitacion])
-def listar_ocupaciones_activas(db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def listar_ocupaciones_activas(db: Session = Depends(get_db), current_user = Depends(require_admin)):
     return crud.get_ocupaciones_activas(db)
 
 
 @router.post("/ocupaciones", response_model=schemas.OcupacionHabitacion)
-def crear_ocupacion(ocupacion: schemas.OcupacionHabitacionCreate, db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def crear_ocupacion(ocupacion: schemas.OcupacionHabitacionCreate, db: Session = Depends(get_db), current_user = Depends(require_admin)):
     # Verificar cliente en microservicio de clientes
     if not validar_cliente_existente(ocupacion.identificacion_cliente):
         raise HTTPException(status_code=400, detail="Cliente no válido")
@@ -114,7 +102,7 @@ def crear_ocupacion(ocupacion: schemas.OcupacionHabitacionCreate, db: Session = 
 
 
 @router.put("/ocupaciones/{id_ocupacion}/finalizar", response_model=schemas.OcupacionHabitacion)
-def finalizar_ocupacion(id_ocupacion: int, data: schemas.OcupacionHabitacionUpdate, db: Session = Depends(get_db), current_user = Depends(verify_token)):
+def finalizar_ocupacion(id_ocupacion: int, data: schemas.OcupacionHabitacionUpdate, db: Session = Depends(get_db), current_user = Depends(require_admin)):
     ocupacion = crud.finalizar_ocupacion(db, id_ocupacion, data.fecha_fin)
     if not ocupacion:
         raise HTTPException(status_code=404, detail="Ocupación no encontrada")

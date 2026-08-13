@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from .models import Reserva
 from .database import SessionLocal
+from .security import generar_token_sistema
 import requests
 from fastapi import HTTPException
 from datetime import date
@@ -18,9 +19,13 @@ CLIENTES_SERVICE_URL = os.getenv("CLIENTES_SERVICE_URL", "http://localhost:8081"
 HABITACIONES_SERVICE_URL = os.getenv("HABITACIONES_SERVICE_URL", "http://localhost:8082/api")
 
 
-def verificar_cliente(id_cliente: int) -> bool:
+def verificar_cliente(id_cliente: int, auth_header: str | None = None) -> bool:
     try:
-        response = requests.get(f"{CLIENTES_SERVICE_URL}/clientes/documento/{id_cliente}", timeout=5)
+        response = requests.get(
+            f"{CLIENTES_SERVICE_URL}/clientes/documento/{id_cliente}",
+            headers={"Authorization": auth_header or f"Bearer {generar_token_sistema()}"},
+            timeout=5,
+        )
     except requests.exceptions.RequestException:
         raise HTTPException(status_code=503, detail="Servicio de clientes no disponible")
 
@@ -49,14 +54,14 @@ def contar_reservas_solapadas(db: Session, tipo_habitacion: str, fecha_inicio: d
     ).count()
 
 
-def crear_reserva(db: Session, reserva, canal: str = "Online"):
+def crear_reserva(db: Session, reserva, canal: str = "Online", auth_header: str | None = None):
     if reserva.fecha_inicio >= reserva.fecha_fin:
         raise HTTPException(status_code=400, detail="La fecha de inicio debe ser anterior a la fecha de fin")
 
     if reserva.fecha_inicio < date.today():
         raise HTTPException(status_code=400, detail="La fecha de inicio no puede ser anterior a la fecha de creación de la reserva")
 
-    if not verificar_cliente(reserva.identificacion_cliente):
+    if not verificar_cliente(reserva.identificacion_cliente, auth_header=auth_header):
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     habitaciones_tipo = obtener_habitaciones_por_tipo(reserva.tipo_habitacion)
@@ -94,7 +99,7 @@ def obtener_reserva(db: Session, id_reserva: int):
     return db.query(Reserva).filter(Reserva.id_reserva == id_reserva).first()
 
 
-def checkin_reserva(db: Session, id_reserva: int):
+def checkin_reserva(db: Session, id_reserva: int, auth_header: str | None = None):
     reserva = obtener_reserva(db, id_reserva)
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
@@ -113,6 +118,7 @@ def checkin_reserva(db: Session, id_reserva: int):
         response = requests.put(
             f"{HABITACIONES_SERVICE_URL}/habitaciones/{numero_habitacion}",
             json={"estado": "Ocupada"},
+            headers={"Authorization": auth_header or f"Bearer {generar_token_sistema()}"},
             timeout=5,
         )
     except requests.exceptions.RequestException:
@@ -129,7 +135,7 @@ def checkin_reserva(db: Session, id_reserva: int):
     return reserva
 
 
-def checkout_reserva(db: Session, id_reserva: int):
+def checkout_reserva(db: Session, id_reserva: int, auth_header: str | None = None):
     reserva = obtener_reserva(db, id_reserva)
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
@@ -144,6 +150,7 @@ def checkout_reserva(db: Session, id_reserva: int):
         response = requests.put(
             f"{HABITACIONES_SERVICE_URL}/habitaciones/{reserva.numero_habitacion}",
             json={"estado": "Libre"},
+            headers={"Authorization": auth_header or f"Bearer {generar_token_sistema()}"},
             timeout=5,
         )
     except requests.exceptions.RequestException:
@@ -175,6 +182,7 @@ def actualizar_reservas_vencidas():
                     requests.put(
                         f"{HABITACIONES_SERVICE_URL}/habitaciones/{reserva.numero_habitacion}",
                         json={"estado": "Libre"},
+                        headers={"Authorization": f"Bearer {generar_token_sistema()}"},
                         timeout=5,
                     )
                 except requests.exceptions.RequestException:
