@@ -5,9 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 from . import models
 from .database import engine
 from .routers import habitaciones
+from .crud import job_liberar_habitaciones_limpieza
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SERVICE_DIR = Path(__file__).resolve().parent.parent
@@ -55,6 +57,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(job_liberar_habitaciones_limpieza, "interval", minutes=1)
+scheduler.start()
 
 app.include_router(habitaciones.router)
 

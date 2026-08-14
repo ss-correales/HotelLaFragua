@@ -247,7 +247,7 @@ def checkout_reserva(db: Session, id_reserva: int, auth_header: str | None = Non
     try:
         response = requests.put(
             f"{HABITACIONES_SERVICE_URL}/habitaciones/{reserva.numero_habitacion}",
-            json={"estado": "Libre"},
+            json={"estado": "Limpieza"},
             headers={"Authorization": f"Bearer {generar_token_sistema()}"},
             timeout=5,
         )
@@ -279,7 +279,7 @@ def actualizar_reservas_vencidas():
                 try:
                     requests.put(
                         f"{HABITACIONES_SERVICE_URL}/habitaciones/{reserva.numero_habitacion}",
-                        json={"estado": "Libre"},
+                        json={"estado": "Limpieza"},
                         headers={"Authorization": f"Bearer {generar_token_sistema()}"},
                         timeout=5,
                     )

@@ -108,6 +108,8 @@ class HabitacionUpdate(BaseModel):
 # Respuesta al cliente
 # -----------------------------
 class Habitacion(HabitacionBase):
+    limpieza_hasta: Optional[datetime] = None
+
     model_config = {"from_attributes": True}
 
 

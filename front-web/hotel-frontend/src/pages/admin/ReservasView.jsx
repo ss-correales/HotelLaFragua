@@ -283,61 +283,61 @@ function ReservasView() {
       <div className="card shadow-lg">
         <div className="card-body p-0">
           <div className="table-responsive">
-            <table className="table table-hover mb-0">
+            <table className="table table-hover table-sm mb-0 small">
               <thead className="table-light">
                 <tr>
-                  <th className="border-0">ID Reserva</th>
-                  <th className="border-0">Identificación Cliente</th>
-                  <th className="border-0">Tipo Habitación</th>
-                  <th className="border-0">Número Habitación</th>
-                  <th className="border-0">Fecha Inicio</th>
-                  <th className="border-0">Fecha Fin</th>
-                  <th className="border-0">Estado</th>
-                  <th className="border-0">Canal</th>
-                  <th className="border-0">Fecha Creación</th>
-                  <th className="border-0">Acciones</th>
+                  <th className="border-0 text-center">ID Reserva</th>
+                  <th className="border-0 text-center">Identificación Cliente</th>
+                  <th className="border-0 text-center">Tipo Habitación</th>
+                  <th className="border-0 text-center">Número Habitación</th>
+                  <th className="border-0 text-center">Fecha Inicio</th>
+                  <th className="border-0 text-center">Fecha Fin</th>
+                  <th className="border-0 text-center">Estado</th>
+                  <th className="border-0 text-center">Canal</th>
+                  <th className="border-0 text-center">Fecha Creación</th>
+                  <th className="border-0 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredReservas.length > 0 ? (
                   filteredReservas.map((reserva) => (
                     <tr key={reserva.id_reserva} className={reserva.estado === "Finalizada" ? "table-secondary" : ""}>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="fw-bold">#{reserva.id_reserva}</span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="fw-semibold">{reserva.identificacion_cliente}</span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="fw-semibold">{reserva.tipo_habitacion}</span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="fw-semibold">{reserva.numero_habitacion ?? "-"}</span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="small">
                           {reserva.fecha_inicio ? new Date(reserva.fecha_inicio).toLocaleDateString() : ""}
                         </span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="small">
                           {reserva.fecha_fin ? new Date(reserva.fecha_fin).toLocaleDateString() : ""}
                         </span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         {getEstadoBadge(reserva.estado)}
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className={`badge ${reserva.canal === "Presencial" ? "bg-info text-dark" : "bg-primary"}`}>
                           {reserva.canal || "No disponible"}
                         </span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <span className="small text-muted">
                           {reserva.fecha_creacion ? new Date(reserva.fecha_creacion).toLocaleString() : ""}
                         </span>
                       </td>
-                      <td className="align-middle">
+                      <td className="align-middle text-center">
                         <div className="btn-group">
                           {reserva.estado === 'Pendiente' && (
                             <button
@@ -487,12 +487,14 @@ function ReservasView() {
                   </div>
                 ) : (
                   <>
+                    <p className="small text-muted mb-2">Leyenda de colores (solo referencia, no son botones):</p>
                     <div className="d-flex gap-3 mb-3 small">
                       <span><span className="badge bg-success">&nbsp;</span> Libre</span>
                       <span><span className="badge bg-danger">&nbsp;</span> Ocupada</span>
                       <span><span className="badge bg-warning">&nbsp;</span> Limpieza</span>
                       <span><span className="badge bg-info">&nbsp;</span> Mantenimiento</span>
                     </div>
+                    <p className="small fw-semibold mb-2">Elige una habitación libre para asignar:</p>
                     <div className="row row-cols-3 row-cols-md-4 g-2">
                       {habitacionesDisponibles.map((h) => {
                         const esLibre = h.estado === "Libre";

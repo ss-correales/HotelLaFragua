@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
-from datetime import datetime
+from .database import SessionLocal
+from datetime import datetime, timedelta
 from typing import Optional
+
+MINUTOS_LIMPIEZA = 30
 
 
 # -----------------------------
@@ -49,9 +52,40 @@ def update_habitacion(db: Session, numero_habitacion: int, data: schemas.Habitac
     for key, value in update_data.items():
         setattr(db_habitacion, key, value)
 
+    if "estado" in update_data:
+        if update_data["estado"] == "Limpieza":
+            db_habitacion.limpieza_hasta = datetime.now() + timedelta(minutes=MINUTOS_LIMPIEZA)
+        else:
+            db_habitacion.limpieza_hasta = None
+
     db.commit()
     db.refresh(db_habitacion)
     return db_habitacion
+
+
+# -----------------------------
+# Liberar habitaciones cuya ventana de limpieza ya terminó
+# -----------------------------
+def liberar_habitaciones_limpieza(db: Session):
+    vencidas = db.query(models.Habitacion).filter(
+        models.Habitacion.estado == "Limpieza",
+        models.Habitacion.limpieza_hasta <= datetime.now(),
+    ).all()
+
+    for habitacion in vencidas:
+        habitacion.estado = "Libre"
+        habitacion.limpieza_hasta = None
+
+    db.commit()
+
+
+def job_liberar_habitaciones_limpieza():
+    """Wrapper para el scheduler: abre y cierra su propia sesión de DB."""
+    db = SessionLocal()
+    try:
+        liberar_habitaciones_limpieza(db)
+    finally:
+        db.close()
 
 
 # -----------------------------
