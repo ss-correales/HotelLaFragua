@@ -15,10 +15,7 @@ class ReservaCreate(ReservaBase):
     pass
 
 class ReservaCheckin(BaseModel):
-    id_reserva: int
-
-class ReservaCheckout(BaseModel):
-    id_reserva: int
+    numero_habitacion: Optional[int] = None
 
 class ReservaResponse(ReservaBase):
     id_reserva: int

@@ -19,6 +19,22 @@ export const crearReserva = async (reserva) => {
   return response.data;
 };
 
+export const getMisReservas = async () => {
+  const response = await api.get("/reservas/mias");
+  return response.data;
+};
+
+export const checkinReserva = async (idReserva, numeroHabitacion) => {
+  const body = numeroHabitacion ? { numero_habitacion: numeroHabitacion } : {};
+  const response = await api.post(`/reservas/${idReserva}/checkin`, body);
+  return response.data;
+};
+
+export const checkoutReserva = async (idReserva) => {
+  const response = await api.post(`/reservas/${idReserva}/checkout`, {});
+  return response.data;
+};
+
 export const actualizarReserva = async (id, reserva) => {
   const response = await api.put(`/reservas/${id}`, reserva);
   return response.data;
@@ -44,10 +60,10 @@ export const getReservasByEstado = async (estado) => {
   return response.data;
 };
 
-// Obtener habitaciones disponibles para fechas específicas
-export const getHabitacionesDisponibles = async (fechaInicio, fechaFin) => {
+// Consultar cuántas habitaciones de un tipo hay disponibles para un rango de fechas
+export const getDisponibilidad = async (tipoHabitacion, fechaInicio, fechaFin) => {
   const response = await api.get(`/reservas/disponibles`, {
-    params: { fechaInicio, fechaFin },
+    params: { tipo_habitacion: tipoHabitacion, fecha_inicio: fechaInicio, fecha_fin: fechaFin },
   });
   return response.data;
 };

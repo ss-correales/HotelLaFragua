@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { crearReserva, getHabitacionesDisponibles } from "../../services/reservasApi";
+import { crearReserva, getDisponibilidad, getMisReservas, checkinReserva } from "../../services/reservasApi";
 import DatePicker from "react-datepicker";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -29,10 +29,16 @@ function ReservasView() {
     fecha_fin: ""
   });
   
-  const [habitacionesDisponibles, setHabitacionesDisponibles] = useState([]);
+  const [habitacionesDisponibles, setHabitacionesDisponibles] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showAvailable, setShowAvailable] = useState(false);
   const [reservaSuccess, setReservaSuccess] = useState(false);
+
+  const [misReservas, setMisReservas] = useState([]);
+  const [loadingMisReservas, setLoadingMisReservas] = useState(false);
+  const [checkinEnCurso, setCheckinEnCurso] = useState(null);
+  const [reservaParaCheckin, setReservaParaCheckin] = useState(null);
+  const [checkinCompletado, setCheckinCompletado] = useState(false);
 
   // Preseleccionar el tipo de habitación si venimos de un botón "Reservar Ahora"
   useEffect(() => {
@@ -94,6 +100,61 @@ function ReservasView() {
     }
   }, []);
 
+  // Cargar "Mis Reservas" si el cliente está logueado
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const cargarMisReservas = async () => {
+      setLoadingMisReservas(true);
+      try {
+        const data = await getMisReservas();
+        setMisReservas(data);
+      } catch (error) {
+        console.error("Error cargando mis reservas:", error);
+      } finally {
+        setLoadingMisReservas(false);
+      }
+    };
+
+    cargarMisReservas();
+  }, []);
+
+  // El check-in real se valida en el backend; esto solo habilita/deshabilita el botón en la UI
+  const puedeHacerCheckin = (reserva) => {
+    if (reserva.estado !== "Pendiente") return false;
+    const inicio = new Date(reserva.fecha_inicio);
+    const ventana = new Date(inicio);
+    ventana.setDate(ventana.getDate() - 1);
+    return new Date() >= ventana;
+  };
+
+  const handleAbrirCheckin = (reserva) => {
+    setCheckinCompletado(false);
+    setReservaParaCheckin(reserva);
+  };
+
+  const closeCheckinModal = () => {
+    setReservaParaCheckin(null);
+    setCheckinCompletado(false);
+  };
+
+  const handleConfirmarCheckinPropio = async () => {
+    if (!reservaParaCheckin) return;
+    setCheckinEnCurso(reservaParaCheckin.id_reserva);
+    try {
+      await checkinReserva(reservaParaCheckin.id_reserva);
+      setCheckinCompletado(true);
+      const data = await getMisReservas();
+      setMisReservas(data);
+    } catch (error) {
+      console.error("Error en check-in:", error);
+      alert("No se pudo hacer el check-in: " + (error.response?.data?.detail || "Intenta nuevamente"));
+    } finally {
+      setCheckinEnCurso(null);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -104,7 +165,7 @@ function ReservasView() {
     // Limpiar resultados cuando cambian las fechas
     if (name === 'fecha_inicio' || name === 'fecha_fin') {
       setShowAvailable(false);
-      setHabitacionesDisponibles([]);
+      setHabitacionesDisponibles(0);
     }
   };
 
@@ -116,11 +177,12 @@ function ReservasView() {
 
     setLoading(true);
     try {
-      const disponibles = await getHabitacionesDisponibles(
+      const resultado = await getDisponibilidad(
+        formData.tipo_habitacion,
         formData.fecha_inicio,
         formData.fecha_fin
       );
-      setHabitacionesDisponibles(disponibles);
+      setHabitacionesDisponibles(resultado.disponibles);
       setShowAvailable(true);
     } catch (error) {
       console.error("Error verificando disponibilidad:", error);
@@ -159,7 +221,7 @@ function ReservasView() {
         fecha_fin: ""
       }));
       setShowAvailable(false);
-      setHabitacionesDisponibles([]);
+      setHabitacionesDisponibles(0);
     } catch (error) {
       console.error("Error creando reserva:", error);
       alert('Error al crear la reserva: ' + (error.response?.data?.message || 'Intenta nuevamente'));
@@ -351,6 +413,74 @@ function ReservasView() {
       </div>
 
       <div className="container py-5">
+        {isAuthenticated && (
+          <div className="row justify-content-center mb-5">
+            <div className="col-lg-8">
+              <div className="card shadow-lg border-0">
+                <div className="card-body p-4">
+                  <h4 className="fw-bold mb-4" style={{ color: '#A67C52' }}>
+                    <i className="bi bi-suitcase me-2"></i>
+                    Mis Reservas
+                  </h4>
+
+                  {loadingMisReservas ? (
+                    <div className="text-center py-3">
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Cargando tus reservas...
+                    </div>
+                  ) : misReservas.length === 0 ? (
+                    <p className="text-muted mb-0">Todavía no tienes reservas.</p>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>Tipo</th>
+                            <th>Check-in</th>
+                            <th>Check-out</th>
+                            <th>Habitación</th>
+                            <th>Estado</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {misReservas.map((reserva) => (
+                            <tr key={reserva.id_reserva}>
+                              <td>{reserva.tipo_habitacion}</td>
+                              <td>{new Date(reserva.fecha_inicio).toLocaleDateString('es-ES')}</td>
+                              <td>{new Date(reserva.fecha_fin).toLocaleDateString('es-ES')}</td>
+                              <td>{reserva.numero_habitacion ?? "-"}</td>
+                              <td>
+                                <span className="badge bg-secondary">{reserva.estado}</span>
+                              </td>
+                              <td>
+                                {reserva.estado === "Pendiente" && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    disabled={!puedeHacerCheckin(reserva)}
+                                    onClick={() => handleAbrirCheckin(reserva)}
+                                    title={
+                                      puedeHacerCheckin(reserva)
+                                        ? "Hacer check-in"
+                                        : "Disponible desde 24 horas antes de tu fecha de inicio"
+                                    }
+                                  >
+                                    Check-in
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="row justify-content-center">
           <div className="col-lg-8">
             <div className="card shadow-lg border-0">
@@ -489,7 +619,7 @@ function ReservasView() {
                             const formattedDate = date ? date.toISOString().split('T')[0] : '';
                             setFormData(prev => ({ ...prev, fecha_inicio: formattedDate }));
                             setShowAvailable(false);
-                            setHabitacionesDisponibles([]);
+                            setHabitacionesDisponibles(0);
                           }}
                           className="form-control"
                           placeholderText="Selecciona fecha de check-in"
@@ -589,7 +719,7 @@ function ReservasView() {
                             <i className="bi bi-check-circle me-3 fs-4"></i>
                             <div>
                               <strong>¡Habitaciones Disponibles!</strong><br />
-                              Hay {habitacionesDisponibles.length} habitaciones disponibles para las fechas seleccionadas.
+                              Hay {habitacionesDisponibles} habitaciones disponibles para las fechas seleccionadas.
                             </div>
                           </div>
                         </div>
@@ -601,7 +731,7 @@ function ReservasView() {
                       <button
                         type="submit"
                         className="btn btn-primary btn-lg w-100"
-                        disabled={loading || !showAvailable || habitacionesDisponibles.length === 0}
+                        disabled={loading || !showAvailable || habitacionesDisponibles === 0}
                       >
                         {loading ? (
                           <>
@@ -623,6 +753,68 @@ function ReservasView() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Check-in del cliente */}
+      {reservaParaCheckin && (
+        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {checkinCompletado ? "¡Check-in confirmado!" : "Antes de tu check-in"}
+                </h5>
+                <button type="button" className="btn-close" onClick={closeCheckinModal}></button>
+              </div>
+              <div className="modal-body">
+                {checkinCompletado ? (
+                  <div className="text-center py-3">
+                    <i className="bi bi-check-circle text-success" style={{ fontSize: "3rem" }}></i>
+                    <p className="mt-3 mb-0">
+                      Tu check-in quedó registrado y ya tienes una habitación asignada.
+                      Puedes verla en la tabla de "Mis Reservas".
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="fw-semibold mb-2">Normas de la estadía</p>
+                    <ul className="mb-3">
+                      <li>El horario de check-out es hasta las 12:00 m.</li>
+                      <li>No se permite fumar dentro de las habitaciones.</li>
+                      <li>No se permiten mascotas ni visitantes no registrados.</li>
+                      <li>Debes presentar tu documento de identidad al personal si te lo solicitan.</li>
+                      <li>Cualquier daño a la habitación será cobrado según el reglamento del hotel.</li>
+                    </ul>
+                    <p className="text-muted small mb-0">
+                      Al confirmar, aceptas estas condiciones para tu estadía.
+                    </p>
+                  </>
+                )}
+              </div>
+              <div className="modal-footer">
+                {checkinCompletado ? (
+                  <button type="button" className="btn btn-primary" onClick={closeCheckinModal}>
+                    Cerrar
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className="btn btn-secondary" onClick={closeCheckinModal}>
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-success"
+                      disabled={checkinEnCurso === reservaParaCheckin.id_reserva}
+                      onClick={handleConfirmarCheckinPropio}
+                    >
+                      {checkinEnCurso === reservaParaCheckin.id_reserva ? "Procesando..." : "Acepto, confirmar check-in"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

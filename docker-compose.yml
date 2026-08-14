@@ -75,6 +75,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       CLIENTES_SERVICE_URL: http://clientes-service:8081
       HABITACIONES_SERVICE_URL: http://habitaciones-service:8082/api
+      FACTURACION_SERVICE_URL: http://facturacion-service:8084
     volumes:
       - ./reservas-service/app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8083 --reload

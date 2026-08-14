@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
-from typing import List
+from typing import List, Literal
 
 
 class PagoBase(BaseModel):
@@ -24,7 +24,7 @@ class PagoResponse(PagoBase):
 class FacturaBase(BaseModel):
     id_reserva: int
     total: float
-    estado: str = "Pendiente"
+    estado: Literal["pendiente", "pagada"] = "pendiente"
 
 
 class FacturaCreate(FacturaBase):

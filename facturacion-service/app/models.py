@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, Float, String, Date, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import date
@@ -11,7 +11,7 @@ class Factura(Base):
     id_reserva = Column(Integer, nullable=False)
     total = Column(Float, nullable=False)
     fecha_emision = Column(Date, default=date.today)
-    estado = Column(String(20), default="Pendiente")
+    estado = Column(Enum('pendiente', 'pagada', name='estado_factura_enum'), default='pendiente')
 
     pagos = relationship("Pago", back_populates="factura")
 

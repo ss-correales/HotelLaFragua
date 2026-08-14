@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import {
   getReservas,
   crearReserva,
-  actualizarReserva,
-  eliminarReserva,
-  cambiarEstadoReserva
+  checkinReserva,
+  checkoutReserva
 } from "../../services/reservasApi";
+import { getHabitaciones } from "../../services/habitacionesApi";
 
 function ReservasView() {
   const [reservas, setReservas] = useState([]);
@@ -13,17 +13,21 @@ function ReservasView() {
   const [loading, setLoading] = useState(true);
   const [searchReserva, setSearchReserva] = useState("");
   const [showModalReserva, setShowModalReserva] = useState(false);
-  const [editingReserva, setEditingReserva] = useState(null);
   const [estadisticas, setEstadisticas] = useState(null);
 
   const [formDataReserva, setFormDataReserva] = useState({
     identificacion_cliente: "",
     tipo_habitacion: "Individual",
-    numero_habitacion: "",
     fecha_inicio: "",
-    fecha_fin: "",
-    estado: "Pendiente"
+    fecha_fin: ""
   });
+
+  // Check-in
+  const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [reservaParaCheckin, setReservaParaCheckin] = useState(null);
+  const [habitacionesDisponibles, setHabitacionesDisponibles] = useState([]);
+  const [habitacionSeleccionada, setHabitacionSeleccionada] = useState("");
+  const [checkinLoading, setCheckinLoading] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -52,42 +56,13 @@ function ReservasView() {
   const handleSubmitReserva = async (e) => {
     e.preventDefault();
     try {
-      if (editingReserva) {
-        await actualizarReserva(editingReserva.id_reserva, formDataReserva);
-        alert("Reserva actualizada correctamente");
-      } else {
-        await crearReserva(formDataReserva);
-        alert("Reserva creada correctamente");
-      }
+      await crearReserva(formDataReserva);
+      alert("Reserva creada correctamente");
       await cargarDatos();
       closeModal();
     } catch (error) {
       console.error("Error guardando reserva:", error);
-      alert("Error al guardar la reserva: " + (error.response?.data?.message || "Intenta nuevamente"));
-    }
-  };
-
-  const handleDeleteReserva = async (id) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta reserva?")) {
-      try {
-        await eliminarReserva(id);
-        await cargarDatos();
-        alert("Reserva eliminada correctamente");
-      } catch (error) {
-        console.error("Error eliminando reserva:", error);
-        alert("Error al eliminar la reserva: " + (error.response?.data?.message || "Intenta nuevamente"));
-      }
-    }
-  };
-
-  const handleCambiarEstado = async (id, nuevoEstado) => {
-    try {
-      await cambiarEstadoReserva(id, nuevoEstado);
-      await cargarDatos();
-      alert(`Reserva ${nuevoEstado} correctamente`);
-    } catch (error) {
-      console.error("Error cambiando estado:", error);
-      alert("Error al cambiar estado: " + (error.response?.data?.message || "Intenta nuevamente"));
+      alert("Error al guardar la reserva: " + (error.response?.data?.detail || "Intenta nuevamente"));
     }
   };
 
@@ -95,12 +70,9 @@ function ReservasView() {
     setFormDataReserva({
       identificacion_cliente: "",
       tipo_habitacion: "Individual",
-      numero_habitacion: "",
       fecha_inicio: "",
-      fecha_fin: "",
-      estado: "Pendiente"
+      fecha_fin: ""
     });
-    setEditingReserva(null);
   };
 
   const closeModal = () => {
@@ -108,17 +80,67 @@ function ReservasView() {
     resetForm();
   };
 
-  const handleEditReserva = (reserva) => {
-    setEditingReserva(reserva);
-    setFormDataReserva({
-      identificacion_cliente: reserva.identificacion_cliente,
-      tipo_habitacion: reserva.tipo_habitacion,
-      numero_habitacion: reserva.numero_habitacion,
-      fecha_inicio: reserva.fecha_inicio,
-      fecha_fin: reserva.fecha_fin,
-      estado: reserva.estado
-    });
-    setShowModalReserva(true);
+  // ---- Check-in ----
+  const handleAbrirCheckin = async (reserva) => {
+    setReservaParaCheckin(reserva);
+    setHabitacionSeleccionada("");
+    setShowCheckinModal(true);
+    try {
+      const todas = await getHabitaciones();
+      const delTipo = todas.filter((h) => h.tipo_habitacion === reserva.tipo_habitacion);
+      setHabitacionesDisponibles(delTipo);
+    } catch (error) {
+      console.error("Error cargando habitaciones:", error);
+      setHabitacionesDisponibles([]);
+    }
+  };
+
+  const closeCheckinModal = () => {
+    setShowCheckinModal(false);
+    setReservaParaCheckin(null);
+    setHabitacionesDisponibles([]);
+    setHabitacionSeleccionada("");
+  };
+
+  const colorEstadoHabitacion = (estado) => {
+    switch (estado) {
+      case "Libre": return "success";
+      case "Ocupada": return "danger";
+      case "Limpieza": return "warning";
+      case "Mantenimiento": return "info";
+      default: return "secondary";
+    }
+  };
+
+  const handleConfirmarCheckin = async () => {
+    if (!reservaParaCheckin) return;
+    setCheckinLoading(true);
+    try {
+      await checkinReserva(
+        reservaParaCheckin.id_reserva,
+        habitacionSeleccionada ? parseInt(habitacionSeleccionada, 10) : undefined
+      );
+      alert("Check-in realizado correctamente");
+      await cargarDatos();
+      closeCheckinModal();
+    } catch (error) {
+      console.error("Error en check-in:", error);
+      alert("Error al hacer check-in: " + (error.response?.data?.detail || "Intenta nuevamente"));
+    } finally {
+      setCheckinLoading(false);
+    }
+  };
+
+  const handleCheckout = async (id) => {
+    if (!window.confirm("¿Confirmar check-out de esta reserva?")) return;
+    try {
+      await checkoutReserva(id);
+      alert("Check-out realizado correctamente");
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error en check-out:", error);
+      alert("Error al hacer check-out: " + (error.response?.data?.detail || "Intenta nuevamente"));
+    }
   };
 
   // Filtrar reservas
@@ -212,15 +234,14 @@ function ReservasView() {
               </p>
             </div>
             <div>
-              <button 
+              <button
                 className="btn"
-                style={{ 
-                  background: "#a67c52", 
-                  borderColor: "#a67c52", 
-                  color: "white" 
+                style={{
+                  background: "#a67c52",
+                  borderColor: "#a67c52",
+                  color: "white"
                 }}
                 onClick={() => {
-                  setEditingReserva(null);
                   resetForm();
                   setShowModalReserva(true);
                 }}
@@ -291,7 +312,7 @@ function ReservasView() {
                         <span className="fw-semibold">{reserva.tipo_habitacion}</span>
                       </td>
                       <td className="align-middle">
-                        <span className="fw-semibold">{reserva.numero_habitacion}</span>
+                        <span className="fw-semibold">{reserva.numero_habitacion ?? "-"}</span>
                       </td>
                       <td className="align-middle">
                         <span className="small">
@@ -318,58 +339,34 @@ function ReservasView() {
                       </td>
                       <td className="align-middle">
                         <div className="btn-group">
-                          <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => handleEditReserva(reserva)}
-                            title="Editar reserva"
-                          >
-                            <i className="bi bi-pencil"></i>
-                          </button>
-                          
                           {reserva.estado === 'Pendiente' && (
                             <button
                               className="btn btn-sm btn-outline-success"
-                              onClick={() => handleCambiarEstado(reserva.id_reserva, 'Confirmada')}
-                              title="Confirmar reserva"
+                              onClick={() => handleAbrirCheckin(reserva)}
+                              title="Hacer check-in"
                             >
-                              <i className="bi bi-check-lg"></i>
+                              <i className="bi bi-box-arrow-in-right me-1"></i>
+                              Check-in
                             </button>
                           )}
-                          
+
                           {reserva.estado === 'Confirmada' && (
                             <button
                               className="btn btn-sm btn-outline-info"
-                              onClick={() => handleCambiarEstado(reserva.id_reserva, 'Finalizada')}
-                              title="Completar reserva"
+                              onClick={() => handleCheckout(reserva.id_reserva)}
+                              title="Hacer check-out"
                             >
-                              <i className="bi bi-check-circle"></i>
+                              <i className="bi bi-box-arrow-right me-1"></i>
+                              Check-out
                             </button>
                           )}
-                          
-                          {reserva.estado !== 'Cancelada' && (
-                            <button
-                              className="btn btn-sm btn-outline-warning"
-                              onClick={() => handleCambiarEstado(reserva.id_reserva, 'Cancelada')}
-                              title="Cancelar reserva"
-                            >
-                              <i className="bi bi-x-lg"></i>
-                            </button>
-                          )}
-                          
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleDeleteReserva(reserva.id_reserva)}
-                            title="Eliminar reserva"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="9" className="text-center py-5">
+                    <td colSpan="10" className="text-center py-5">
                       <div className="text-muted">
                         <i className="bi bi-calendar-x fs-1 mb-3 d-block"></i>
                         <h5>No se encontraron reservas</h5>
@@ -384,15 +381,13 @@ function ReservasView() {
         </div>
       </div>
 
-      {/* Modal de Reserva */}
+      {/* Modal de Nueva Reserva */}
       {showModalReserva && (
         <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingReserva ? "Editar Reserva" : "Nueva Reserva"}
-                </h5>
+                <h5 className="modal-title">Nueva Reserva</h5>
                 <button type="button" className="btn-close" onClick={closeModal}></button>
               </div>
               <form onSubmit={handleSubmitReserva}>
@@ -426,36 +421,7 @@ function ReservasView() {
                       </select>
                     </div>
                   </div>
-                  <div className="row g-3">
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Número Habitación</label>
-                      <input
-                        type="number"
-                        className="form-control form-control-lg"
-                        name="numero_habitacion"
-                        value={formDataReserva.numero_habitacion}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Número de habitación"
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Estado</label>
-                      <select
-                        className="form-select form-select-lg"
-                        name="estado"
-                        value={formDataReserva.estado}
-                        onChange={handleInputChange}
-                        required
-                      >
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Confirmada">Confirmada</option>
-                        <option value="Cancelada">Cancelada</option>
-                        <option value="Finalizada">Finalizada</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="row g-3">
+                  <div className="row g-3 mt-1">
                     <div className="col-md-6">
                       <label className="form-label fw-bold text-primary">Fecha Inicio</label>
                       <input
@@ -481,16 +447,88 @@ function ReservasView() {
                       />
                     </div>
                   </div>
+                  <p className="text-muted small mt-3 mb-0">
+                    La habitación específica se asigna al hacer el check-in, no en este paso.
+                  </p>
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={closeModal}>
                     Cancelar
                   </button>
-                  <button type="submit" className="btn" style={{background: "#a67c52", borderColor: "#a67c52", color: "white"}}>
-                    {editingReserva ? "Actualizar" : "Crear"}
+                  <button type="submit" className="btn" style={{ background: "#a67c52", borderColor: "#a67c52", color: "white" }}>
+                    Crear
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Check-in */}
+      {showCheckinModal && reservaParaCheckin && (
+        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Check-in — Reserva #{reservaParaCheckin.id_reserva}
+                </h5>
+                <button type="button" className="btn-close" onClick={closeCheckinModal}></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  Tipo de habitación: <strong>{reservaParaCheckin.tipo_habitacion}</strong>
+                </p>
+
+                {habitacionesDisponibles.length === 0 ? (
+                  <div className="alert alert-warning mb-0">
+                    No hay habitaciones de este tipo registradas.
+                  </div>
+                ) : (
+                  <>
+                    <div className="d-flex gap-3 mb-3 small">
+                      <span><span className="badge bg-success">&nbsp;</span> Libre</span>
+                      <span><span className="badge bg-danger">&nbsp;</span> Ocupada</span>
+                      <span><span className="badge bg-warning">&nbsp;</span> Limpieza</span>
+                      <span><span className="badge bg-info">&nbsp;</span> Mantenimiento</span>
+                    </div>
+                    <div className="row row-cols-3 row-cols-md-4 g-2">
+                      {habitacionesDisponibles.map((h) => {
+                        const esLibre = h.estado === "Libre";
+                        const seleccionada = habitacionSeleccionada === String(h.numero_habitacion);
+                        return (
+                          <div className="col" key={h.numero_habitacion}>
+                            <button
+                              type="button"
+                              disabled={!esLibre}
+                              onClick={() => setHabitacionSeleccionada(String(h.numero_habitacion))}
+                              className={`btn btn-${colorEstadoHabitacion(h.estado)} w-100 py-3 ${seleccionada ? "border border-dark border-3" : ""}`}
+                              style={{ opacity: esLibre ? 1 : 0.6 }}
+                            >
+                              <div className="fw-bold">H-{h.numero_habitacion}</div>
+                              <div className="small">{h.estado}</div>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closeCheckinModal}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  disabled={!habitacionSeleccionada || checkinLoading}
+                  onClick={handleConfirmarCheckin}
+                >
+                  {checkinLoading ? "Procesando..." : "Confirmar check-in"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
