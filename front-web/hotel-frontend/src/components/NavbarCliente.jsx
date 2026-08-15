@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../assets/css/hotel-styles.css";
+import "./NavbarCliente.css";
 
 function NavbarCliente() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,14 +58,14 @@ function NavbarCliente() {
     { id: "gastronomia", label: "Gastronomía" },
     { id: "para-hacer", label: "Para Hacer" },
     { id: "bienestar", label: "Bienestar" },
-    { id: "grupos", label: "Grupos & Eventos" },
+    { id: "grupos", label: "Eventos" },
     { id: "galeria", label: "Galería" },
     { id: "contacto", label: "Contacto" },
   ];
 
   return (
     <nav
-      className="navbar navbar-expand-lg navbar-dark fixed-top"
+      className="navbar navbar-cliente navbar-expand-lg navbar-dark fixed-top"
       style={{
         background:
           "linear-gradient(135deg, rgba(166, 124, 82, 0.97) 0%, rgba(139, 99, 68, 0.97) 100%)",
