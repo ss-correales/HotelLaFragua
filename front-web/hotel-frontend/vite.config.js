@@ -5,22 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/auth': {
-        target: 'http://localhost:8086',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/api': {
-        target: 'http://localhost:8086',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/reservas': {
-        target: 'http://localhost:8083',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
+    host: '0.0.0.0',
+    port: 5173,
   }
 })
