@@ -200,13 +200,9 @@ function PerfilCliente() {
                     <i className="bi bi-key me-2"></i>
                     Cambiar Contraseña
                   </button>
-                  <button className="btn btn-outline-warning">
+                  <button className="btn btn-outline-warning" onClick={() => navigate("/mis-reservas")}>
                     <i className="bi bi-calendar-check me-2"></i>
                     Mis Reservas
-                  </button>
-                  <button className="btn btn-outline-secondary">
-                    <i className="bi bi-clock-history me-2"></i>
-                    Historial
                   </button>
                 </div>
               </div>

@@ -12,6 +12,7 @@ import Login from "./pages/cliente/Login.jsx";
 import RegistroCliente from "./pages/cliente/RegistroCliente.jsx";
 import HabitacionesView from "./pages/cliente/HabitacionesView.jsx";
 import ClienteReservasView from "./pages/cliente/ReservasView.jsx";
+import MisReservasView from "./pages/cliente/MisReservasView.jsx";
 
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -29,6 +30,7 @@ function App() {
           <Route path="/" element={<ClienteHome />} />
           <Route path="/habitaciones" element={<HabitacionesView />} />
           <Route path="/reservas" element={<ClienteReservasView />} />
+          <Route path="/mis-reservas" element={<MisReservasView />} />
           <Route path="/perfil" element={<PerfilCliente />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<RegistroCliente />} />

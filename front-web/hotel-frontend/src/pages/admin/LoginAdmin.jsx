@@ -9,10 +9,12 @@ function LoginAdmin() {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const iniciarSesionAdmin = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
     try {
@@ -24,7 +26,7 @@ function LoginAdmin() {
       const token = response.data.access_token;
 
       if (!token) {
-        alert("Error en el login de administrador. Intenta nuevamente.");
+        setError("El correo y/o la contraseña son incorrectos, por favor inténtelo de nuevo.");
         return;
       }
 
@@ -34,7 +36,7 @@ function LoginAdmin() {
         const payload = token.split('.')[1];
         decodedPayload = JSON.parse(atob(payload));
       } catch {
-        alert("No se pudo verificar el rol del usuario. Contacta al administrador del sistema.");
+        setError("No se pudo verificar el rol del usuario. Contacta al administrador del sistema.");
         return;
       }
 
@@ -50,7 +52,7 @@ function LoginAdmin() {
       });
 
       if (!hasAdminRole) {
-        alert("Acceso denegado. Solo los administradores pueden acceder a este panel.");
+        setError("Acceso denegado. Solo los administradores pueden acceder a este panel.");
         return;
       }
 
@@ -62,11 +64,10 @@ function LoginAdmin() {
         detail: { token, user }
       }));
 
-      alert("¡Sesión de administrador iniciada correctamente!");
       navigate("/admin");
 
-    } catch (error) {
-      alert(error.response?.data?.message || "Credenciales de administrador incorrectas");
+    } catch (err) {
+      setError("El correo y/o la contraseña son incorrectos, por favor inténtelo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -129,6 +130,10 @@ function LoginAdmin() {
                     />
                   </div>
                 </div>
+
+                {error && (
+                  <p className="text-danger text-center small mb-3">{error}</p>
+                )}
 
                 {/* Botón */}
                 <div className="d-grid">

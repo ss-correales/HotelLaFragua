@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { crearReserva, getDisponibilidad, getMisReservas, checkinReserva } from "../../services/reservasApi";
+import { useLocation, useNavigate } from "react-router-dom";
+import { crearReserva, getServiciosAdicionales } from "../../services/reservasApi";
+import { getHabitaciones } from "../../services/habitacionesApi";
 import DatePicker from "react-datepicker";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -14,8 +15,26 @@ import "./datepicker-custom.css";
 registerLocale('es', es);
 setDefaultLocale('es');
 
+// "YYYY-MM-DD" se interpreta como medianoche UTC si se pasa directo a `new Date()`,
+// lo que corre la fecha un día atrás en zonas horarias detrás de UTC (como Colombia).
+// Este helper la interpreta en hora local en su lugar.
+const parseFechaLocal = (fechaStr) => {
+  if (!fechaStr) return null;
+  const [year, month, day] = fechaStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatFechaLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 function ReservasView() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
@@ -26,19 +45,20 @@ function ReservasView() {
     telefono: "",
     tipo_habitacion: "Individual",
     fecha_inicio: "",
-    fecha_fin: ""
+    fecha_fin: "",
+    adultos: 1,
+    ninos: 0,
+    bebes: 0
   });
-  
-  const [habitacionesDisponibles, setHabitacionesDisponibles] = useState(0);
+
   const [loading, setLoading] = useState(false);
-  const [showAvailable, setShowAvailable] = useState(false);
   const [reservaSuccess, setReservaSuccess] = useState(false);
 
-  const [misReservas, setMisReservas] = useState([]);
-  const [loadingMisReservas, setLoadingMisReservas] = useState(false);
-  const [checkinEnCurso, setCheckinEnCurso] = useState(null);
-  const [reservaParaCheckin, setReservaParaCheckin] = useState(null);
-  const [checkinCompletado, setCheckinCompletado] = useState(false);
+  const [habitaciones, setHabitaciones] = useState([]);
+  const [serviciosDisponibles, setServiciosDisponibles] = useState([]);
+  const [serviciosSeleccionados, setServiciosSeleccionados] = useState([]);
+
+  const fechasCompletas = Boolean(formData.fecha_inicio && formData.fecha_fin);
 
   // Preseleccionar el tipo de habitación si venimos de un botón "Reservar Ahora"
   useEffect(() => {
@@ -52,16 +72,12 @@ function ReservasView() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const clienteData = localStorage.getItem('clienteData');
-    
+
     setIsAuthenticated(!!token);
-    console.log("Token encontrado:", !!token);
-    console.log("Datos del cliente en localStorage:", clienteData);
-    
+
     if (clienteData && token) {
       try {
         const cliente = JSON.parse(clienteData);
-        console.log("Cliente parseado:", cliente);
-        
         setFormData(prev => ({
           ...prev,
           nombre: cliente.nombre || "",
@@ -71,89 +87,61 @@ function ReservasView() {
           correo: cliente.correo || "",
           telefono: cliente.telefono || ""
         }));
-        
-        console.log("FormData actualizado:", {
-          nombre: cliente.nombre || "",
-          apellido: cliente.apellido || "",
-          tipo_documento: cliente.tipo_documento || "CC",
-          numero_documento: cliente.numero_documento || "",
-          correo: cliente.correo || "",
-          telefono: cliente.telefono || ""
-        });
       } catch (error) {
         console.error("Error parseando datos del cliente:", error);
-        // Limpiar datos corruptos
         localStorage.removeItem('clienteData');
       }
-    } else {
-      console.log("No se encontraron datos del cliente o token");
-      // Limpiar formulario si no está autenticado
-      setFormData(prev => ({
-        ...prev,
-        nombre: "",
-        apellido: "",
-        tipo_documento: "CC",
-        numero_documento: "",
-        correo: "",
-        telefono: ""
-      }));
     }
   }, []);
 
-  // Cargar "Mis Reservas" si el cliente está logueado
+  // Cargar habitaciones (para precios) y catálogo de servicios adicionales
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const cargarMisReservas = async () => {
-      setLoadingMisReservas(true);
-      try {
-        const data = await getMisReservas();
-        setMisReservas(data);
-      } catch (error) {
-        console.error("Error cargando mis reservas:", error);
-      } finally {
-        setLoadingMisReservas(false);
-      }
-    };
-
-    cargarMisReservas();
+    getHabitaciones().then(setHabitaciones).catch((error) => console.error("Error cargando habitaciones:", error));
+    getServiciosAdicionales().then(setServiciosDisponibles).catch((error) => console.error("Error cargando servicios adicionales:", error));
   }, []);
 
-  // El check-in real se valida en el backend; esto solo habilita/deshabilita el botón en la UI
-  const puedeHacerCheckin = (reserva) => {
-    if (reserva.estado !== "Pendiente") return false;
-    const inicio = new Date(reserva.fecha_inicio);
-    const ventana = new Date(inicio);
-    ventana.setDate(ventana.getDate() - 1);
-    return new Date() >= ventana;
+  const getPrecioTipo = (tipo) => {
+    const habitacion = habitaciones.find((h) => h.tipo_habitacion === tipo);
+    return habitacion ? Number(habitacion.precio_base) : 0;
   };
 
-  const handleAbrirCheckin = (reserva) => {
-    setCheckinCompletado(false);
-    setReservaParaCheckin(reserva);
+  const getOcupacionMaxima = (tipo) => {
+    const habitacion = habitaciones.find((h) => h.tipo_habitacion === tipo);
+    return habitacion ? Number(habitacion.ocupacion) : 1;
   };
 
-  const closeCheckinModal = () => {
-    setReservaParaCheckin(null);
-    setCheckinCompletado(false);
+  const getNoches = () => {
+    if (!formData.fecha_inicio || !formData.fecha_fin) return 0;
+    const inicio = parseFechaLocal(formData.fecha_inicio);
+    const fin = parseFechaLocal(formData.fecha_fin);
+    return Math.max(Math.round((fin - inicio) / (1000 * 60 * 60 * 24)), 0);
   };
 
-  const handleConfirmarCheckinPropio = async () => {
-    if (!reservaParaCheckin) return;
-    setCheckinEnCurso(reservaParaCheckin.id_reserva);
-    try {
-      await checkinReserva(reservaParaCheckin.id_reserva);
-      setCheckinCompletado(true);
-      const data = await getMisReservas();
-      setMisReservas(data);
-    } catch (error) {
-      console.error("Error en check-in:", error);
-      alert("No se pudo hacer el check-in: " + (error.response?.data?.detail || "Intenta nuevamente"));
-    } finally {
-      setCheckinEnCurso(null);
-    }
+  const TARIFA_NINO = 0.5; // los niños pagan la mitad de la tarifa de adulto; los bebés no pagan
+
+  const factorHuespedes = Number(formData.adultos) + Number(formData.ninos) * TARIFA_NINO;
+  const totalHabitacion = getNoches() * getPrecioTipo(formData.tipo_habitacion) * factorHuespedes;
+  const personasPagantesServicios = Number(formData.adultos) + Number(formData.ninos);
+  const totalServicios = serviciosSeleccionados.reduce((suma, nombre) => {
+    const servicio = serviciosDisponibles.find((s) => s.nombre === nombre);
+    if (!servicio) return suma;
+    const multiplicador = servicio.por_persona ? personasPagantesServicios : 1;
+    return suma + servicio.precio * multiplicador;
+  }, 0);
+  const totalGeneral = totalHabitacion + totalServicios;
+
+  const serviciosPorCategoria = serviciosDisponibles.reduce((grupos, servicio) => {
+    (grupos[servicio.categoria] ||= []).push(servicio);
+    return grupos;
+  }, {});
+
+  const toggleServicio = (nombre) => {
+    setServiciosSeleccionados((prev) =>
+      prev.includes(nombre) ? prev.filter((s) => s !== nombre) : [...prev, nombre]
+    );
   };
+
+  const formatCOP = (valor) => valor.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -161,40 +149,11 @@ function ReservasView() {
       ...prev,
       [name]: value
     }));
-    
-    // Limpiar resultados cuando cambian las fechas
-    if (name === 'fecha_inicio' || name === 'fecha_fin') {
-      setShowAvailable(false);
-      setHabitacionesDisponibles(0);
-    }
-  };
-
-  const checkDisponibilidad = async () => {
-    if (!formData.fecha_inicio || !formData.fecha_fin) {
-      alert('Por favor selecciona las fechas de check-in y check-out');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const resultado = await getDisponibilidad(
-        formData.tipo_habitacion,
-        formData.fecha_inicio,
-        formData.fecha_fin
-      );
-      setHabitacionesDisponibles(resultado.disponibles);
-      setShowAvailable(true);
-    } catch (error) {
-      console.error("Error verificando disponibilidad:", error);
-      alert('Error al verificar disponibilidad. Por favor intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.numero_documento) {
       alert('Por favor inicia sesión para hacer una reserva');
       return;
@@ -202,29 +161,34 @@ function ReservasView() {
 
     setLoading(true);
     try {
-      // Crear reserva solo con los campos de la BD
       const reservaData = {
         identificacion_cliente: formData.numero_documento,
         tipo_habitacion: formData.tipo_habitacion,
         fecha_inicio: formData.fecha_inicio,
-        fecha_fin: formData.fecha_fin
+        fecha_fin: formData.fecha_fin,
+        adultos: Number(formData.adultos),
+        ninos: Number(formData.ninos),
+        bebes: Number(formData.bebes),
+        servicios_adicionales: serviciosSeleccionados
       };
-      
+
       await crearReserva(reservaData);
       setReservaSuccess(true);
-      
+
       // Resetear formulario
       setFormData(prev => ({
         ...prev,
         tipo_habitacion: "Individual",
         fecha_inicio: "",
-        fecha_fin: ""
+        fecha_fin: "",
+        adultos: 1,
+        ninos: 0,
+        bebes: 0
       }));
-      setShowAvailable(false);
-      setHabitacionesDisponibles(0);
+      setServiciosSeleccionados([]);
     } catch (error) {
       console.error("Error creando reserva:", error);
-      alert('Error al crear la reserva: ' + (error.response?.data?.message || 'Intenta nuevamente'));
+      alert('Error al crear la reserva: ' + (error.response?.data?.detail || 'Intenta nuevamente'));
     } finally {
       setLoading(false);
     }
@@ -233,76 +197,24 @@ function ReservasView() {
   if (reservaSuccess) {
     return (
       <div className="reservas-view-cliente">
-        {/* Barra de Navegación Flotante */}
-        <nav className="navbar navbar-expand-lg navbar-dark fixed-top" style={{
-          background: 'linear-gradient(135deg, rgba(166, 124, 82, 0.95) 0%, rgba(139, 99, 68, 0.95) 100%)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 2px 20px rgba(0,0,0,0.1)'
-        }}>
-          <div className="container">
-            <a className="navbar-brand fw-bold" href="/">
-              <i className="bi bi-building me-2"></i>
-              Hotel La Fragua
-            </a>
-            
-            <button 
-              className="navbar-toggler" 
-              type="button"
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-            >
-              <span className="navbar-toggler-icon"></span>
-            </button>
-            
-            <div className={`collapse navbar-collapse ${showMobileMenu ? 'show' : ''}`}>
-              <ul className="navbar-nav ms-auto">
-                <li className="nav-item">
-                  <a className="nav-link" href="/">
-                    <i className="bi bi-house-door me-1"></i> Inicio
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="/habitaciones">
-                    <i className="bi bi-door-closed me-1"></i> Habitaciones
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link active" href="/reservas">
-                    <i className="bi bi-calendar-check me-1"></i> Reservas
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="/contacto">
-                    <i className="bi bi-telephone me-1"></i> Contacto
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="/login">
-                    <i className="bi bi-person-circle me-1"></i> Iniciar Sesión
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </nav>
-
         {/* Success Section */}
-        <div 
-          className="text-center text-white" 
+        <div
+          className="text-center text-white"
           style={{
             backgroundImage: 'url("https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80"), linear-gradient(135deg, #8B6344 0%, #A67C52 100%)',
             backgroundSize: 'cover, cover',
             backgroundPosition: 'center center, center center',
             backgroundRepeat: 'no-repeat, no-repeat',
             backgroundColor: '#8B6344',
-            height: '100vh',
+            minHeight: '55vh',
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            padding: '3rem 1rem'
           }}
         >
-          {/* Overlay oscuro */}
-          <div 
+          <div
             style={{
               position: 'absolute',
               top: 0,
@@ -313,11 +225,10 @@ function ReservasView() {
               zIndex: 1
             }}
           ></div>
-          
-          {/* Contenido */}
-          <div 
-            style={{ 
-              position: 'relative', 
+
+          <div
+            style={{
+              position: 'relative',
               zIndex: 2,
               maxWidth: '600px',
               padding: '2rem'
@@ -328,20 +239,50 @@ function ReservasView() {
             </div>
             <h1 className="display-4 fw-bold mb-3">¡Reserva Confirmada!</h1>
             <p className="lead mb-4">
-              Tu reserva ha sido creada exitosamente. Pronto recibirás un correo de confirmación con todos los detalles.
+              Tu reserva ha sido creada exitosamente. Ya puedes ver todos los detalles en "Mis Reservas".
             </p>
             <div className="d-flex gap-3 justify-content-center">
-              <button 
+              <button
                 className="btn btn-primary btn-lg"
                 onClick={() => setReservaSuccess(false)}
               >
                 <i className="bi bi-calendar-plus me-2"></i>
                 Hacer otra reserva
               </button>
-              <a href="/" className="btn btn-outline-light btn-lg">
-                <i className="bi bi-house me-2"></i>
-                Volver al inicio
-              </a>
+              <button className="btn btn-outline-light btn-lg" onClick={() => navigate("/mis-reservas")}>
+                <i className="bi bi-suitcase me-2"></i>
+                Ver mis reservas
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Información de check-in y normas */}
+        <div className="container py-5">
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
+              <div className="card shadow-lg border-0">
+                <div className="card-body p-4 p-md-5">
+                  <h4 className="fw-bold mb-3" style={{ color: '#A67C52' }}>
+                    <i className="bi bi-key me-2"></i>
+                    Cómo funciona tu check-in
+                  </h4>
+                  <ul className="mb-4">
+                    <li>Puedes hacer <strong>check-in por tu cuenta</strong> desde "Mis Reservas", disponible desde <strong>24 horas antes</strong> de tu fecha de llegada.</li>
+                    <li>O si prefieres, puedes hacer el check-in <strong>directamente en la recepción</strong> del hotel el día de tu llegada — no necesitas hacer nada antes.</li>
+                    <li>En ambos casos, se te asigna una habitación disponible del tipo que reservaste.</li>
+                  </ul>
+
+                  <h5 className="fw-bold mb-2" style={{ color: '#A67C52' }}>Normas de la estadía</h5>
+                  <ul className="mb-0">
+                    <li>El horario de check-out es hasta las 12:00 m.</li>
+                    <li>No se permite fumar dentro de las habitaciones.</li>
+                    <li>No se permiten mascotas ni visitantes no registrados.</li>
+                    <li>Debes presentar tu documento de identidad al personal si te lo solicitan.</li>
+                    <li>Cualquier daño a la habitación será cobrado según el reglamento del hotel.</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -352,8 +293,8 @@ function ReservasView() {
   return (
     <div className="reservas-view-cliente">
       {/* Hero Section */}
-      <div 
-        className="text-center text-white" 
+      <div
+        className="text-center text-white"
         style={{
           backgroundImage: 'url("https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80"), linear-gradient(135deg, #8B6344 0%, #A67C52 100%)',
           backgroundSize: 'cover, cover',
@@ -370,8 +311,7 @@ function ReservasView() {
           outline: 'none'
         }}
       >
-        {/* Overlay oscuro */}
-        <div 
+        <div
           style={{
             position: 'absolute',
             top: 0,
@@ -382,13 +322,12 @@ function ReservasView() {
             zIndex: 1
           }}
         ></div>
-        
-        {/* Contenido */}
-        <div 
-          className="container" 
-          style={{ 
-            position: 'relative', 
-            zIndex: 2, 
+
+        <div
+          className="container"
+          style={{
+            position: 'relative',
+            zIndex: 2,
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -397,14 +336,14 @@ function ReservasView() {
             padding: '2rem 2rem 1rem'
           }}
         >
-          <h1 
-            className="display-4 fw-bold mb-2 text-white" 
+          <h1
+            className="display-4 fw-bold mb-2 text-white"
             style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}
           >
             Reservar tu Estancia
           </h1>
-          <p 
-            className="lead mb-0 text-white" 
+          <p
+            className="lead mb-0 text-white"
             style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}
           >
             Completa el formulario para garantizar tu habitación perfecta
@@ -413,74 +352,6 @@ function ReservasView() {
       </div>
 
       <div className="container py-5">
-        {isAuthenticated && (
-          <div className="row justify-content-center mb-5">
-            <div className="col-lg-8">
-              <div className="card shadow-lg border-0">
-                <div className="card-body p-4">
-                  <h4 className="fw-bold mb-4" style={{ color: '#A67C52' }}>
-                    <i className="bi bi-suitcase me-2"></i>
-                    Mis Reservas
-                  </h4>
-
-                  {loadingMisReservas ? (
-                    <div className="text-center py-3">
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Cargando tus reservas...
-                    </div>
-                  ) : misReservas.length === 0 ? (
-                    <p className="text-muted mb-0">Todavía no tienes reservas.</p>
-                  ) : (
-                    <div className="table-responsive">
-                      <table className="table table-hover align-middle mb-0">
-                        <thead>
-                          <tr>
-                            <th>Tipo</th>
-                            <th>Check-in</th>
-                            <th>Check-out</th>
-                            <th>Habitación</th>
-                            <th>Estado</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {misReservas.map((reserva) => (
-                            <tr key={reserva.id_reserva}>
-                              <td>{reserva.tipo_habitacion}</td>
-                              <td>{new Date(reserva.fecha_inicio).toLocaleDateString('es-ES')}</td>
-                              <td>{new Date(reserva.fecha_fin).toLocaleDateString('es-ES')}</td>
-                              <td>{reserva.numero_habitacion ?? "-"}</td>
-                              <td>
-                                <span className="badge bg-secondary">{reserva.estado}</span>
-                              </td>
-                              <td>
-                                {reserva.estado === "Pendiente" && (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    disabled={!puedeHacerCheckin(reserva)}
-                                    onClick={() => handleAbrirCheckin(reserva)}
-                                    title={
-                                      puedeHacerCheckin(reserva)
-                                        ? "Hacer check-in"
-                                        : "Disponible desde 24 horas antes de tu fecha de inicio"
-                                    }
-                                  >
-                                    Check-in
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="row justify-content-center">
           <div className="col-lg-8">
             <div className="card shadow-lg border-0">
@@ -610,19 +481,62 @@ function ReservasView() {
                       </select>
                     </div>
 
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">
+                        Huéspedes
+                        {habitaciones.length > 0 && (
+                          <span className="text-muted fw-normal"> (máx. {getOcupacionMaxima(formData.tipo_habitacion)} en total)</span>
+                        )}
+                      </label>
+                      <div className="row g-2">
+                        <div className="col-4">
+                          <label className="form-label small text-muted mb-1">Adultos (11+)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="adultos"
+                            min="1"
+                            value={formData.adultos}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <div className="col-4">
+                          <label className="form-label small text-muted mb-1">Niños (3-10)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="ninos"
+                            min="0"
+                            value={formData.ninos}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="col-4">
+                          <label className="form-label small text-muted mb-1">Bebés (0-2)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="bebes"
+                            min="0"
+                            value={formData.bebes}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-muted small mt-1 mb-0">Los niños pagan mitad de tarifa, los bebés no pagan.</p>
+                    </div>
+
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Check-in</label>
+                      <label className="form-label fw-semibold">Fecha de Inicio</label>
                       <div className="input-group">
                         <DatePicker
-                          selected={formData.fecha_inicio ? new Date(formData.fecha_inicio) : null}
+                          selected={parseFechaLocal(formData.fecha_inicio)}
                           onChange={(date) => {
-                            const formattedDate = date ? date.toISOString().split('T')[0] : '';
-                            setFormData(prev => ({ ...prev, fecha_inicio: formattedDate }));
-                            setShowAvailable(false);
-                            setHabitacionesDisponibles(0);
+                            setFormData(prev => ({ ...prev, fecha_inicio: formatFechaLocal(date) }));
                           }}
                           className="form-control"
-                          placeholderText="Selecciona fecha de check-in"
+                          placeholderText="Selecciona fecha de inicio"
                           minDate={new Date()}
                           dateFormat="dd/MM/yyyy"
                           locale="es"
@@ -631,8 +545,8 @@ function ReservasView() {
                             <input
                               type="text"
                               className="form-control"
-                              value={formData.fecha_inicio ? new Date(formData.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
-                              placeholder="Selecciona fecha de check-in"
+                              value={formData.fecha_inicio ? parseFechaLocal(formData.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                              placeholder="Selecciona fecha de inicio"
                               readOnly
                             />
                           }
@@ -644,17 +558,16 @@ function ReservasView() {
                     </div>
 
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Check-out</label>
+                      <label className="form-label fw-semibold">Fecha de Fin</label>
                       <div className="input-group">
                         <DatePicker
-                          selected={formData.fecha_fin ? new Date(formData.fecha_fin) : null}
+                          selected={parseFechaLocal(formData.fecha_fin)}
                           onChange={(date) => {
-                            const formattedDate = date ? date.toISOString().split('T')[0] : '';
-                            setFormData(prev => ({ ...prev, fecha_fin: formattedDate }));
+                            setFormData(prev => ({ ...prev, fecha_fin: formatFechaLocal(date) }));
                           }}
                           className="form-control"
-                          placeholderText="Selecciona fecha de check-out"
-                          minDate={formData.fecha_inicio ? new Date(formData.fecha_inicio) : new Date()}
+                          placeholderText="Selecciona fecha de fin"
+                          minDate={formData.fecha_inicio ? parseFechaLocal(formData.fecha_inicio) : new Date()}
                           dateFormat="dd/MM/yyyy"
                           locale="es"
                           required
@@ -662,8 +575,8 @@ function ReservasView() {
                             <input
                               type="text"
                               className="form-control"
-                              value={formData.fecha_fin ? new Date(formData.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
-                              placeholder="Selecciona fecha de check-out"
+                              value={formData.fecha_fin ? parseFechaLocal(formData.fecha_fin).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                              placeholder="Selecciona fecha de fin"
                               readOnly
                             />
                           }
@@ -674,53 +587,65 @@ function ReservasView() {
                       </div>
                     </div>
 
-                    {/* Botón de Ver Disponibilidad */}
-                    <div className="col-12">
-                      <button
-                        type="button"
-                        className="btn btn-outline-primary btn-lg w-100"
-                        onClick={checkDisponibilidad}
-                        disabled={loading}
-                        style={{
-                          borderColor: '#A67C52',
-                          color: '#A67C52',
-                          transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = '#A67C52';
-                          e.target.style.color = 'white';
-                          e.target.style.borderColor = '#A67C52';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = 'transparent';
-                          e.target.style.color = '#A67C52';
-                          e.target.style.borderColor = '#A67C52';
-                        }}
-                      >
-                        {loading ? (
-                          <>
-                            <span className="spinner-border spinner-border-sm me-2"></span>
-                            Verificando disponibilidad...
-                          </>
-                        ) : (
-                          <>
-                            <i className="bi bi-search me-2"></i>
-                            Verificar Disponibilidad
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Resultados de Disponibilidad */}
-                    {showAvailable && (
+                    {/* Servicios adicionales (aparecen una vez hay fechas elegidas) */}
+                    {fechasCompletas && (
                       <div className="col-12">
-                        <div className="alert alert-success" role="alert">
-                          <div className="d-flex align-items-center">
-                            <i className="bi bi-check-circle me-3 fs-4"></i>
-                            <div>
-                              <strong>¡Habitaciones Disponibles!</strong><br />
-                              Hay {habitacionesDisponibles} habitaciones disponibles para las fechas seleccionadas.
+                        <h4 className="fw-bold mb-1" style={{ color: '#A67C52' }}>
+                          <i className="bi bi-stars me-2"></i>
+                          Servicios adicionales (opcional)
+                        </h4>
+                        <p className="text-muted small mb-3">Personaliza tu estadía — todos son opcionales y se suman al total.</p>
+
+                        {Object.entries(serviciosPorCategoria).map(([categoria, servicios]) => (
+                          <div key={categoria} className="mb-3">
+                            <p className="fw-semibold mb-2 small" style={{ color: '#8B6344' }}>{categoria}</p>
+                            <div className="row g-2">
+                              {servicios.map((servicio) => (
+                                <div className="col-md-6" key={servicio.nombre}>
+                                  <label className="d-flex align-items-center justify-content-between border rounded p-3" style={{ cursor: "pointer" }}>
+                                    <span>
+                                      <input
+                                        type="checkbox"
+                                        className="form-check-input me-2"
+                                        checked={serviciosSeleccionados.includes(servicio.nombre)}
+                                        onChange={() => toggleServicio(servicio.nombre)}
+                                      />
+                                      {servicio.nombre}
+                                      {servicio.nombre === "Clase de yoga" && (
+                                        <span className="d-block text-muted" style={{ fontSize: "0.75rem" }}>
+                                          Sujeto a disponibilidad, el horario se coordina con el hotel
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="text-muted small">
+                                      {formatCOP(servicio.precio)}{servicio.por_persona ? " / persona" : ""}
+                                    </span>
+                                  </label>
+                                </div>
+                              ))}
                             </div>
+                          </div>
+                        ))}
+
+                        <div className="border rounded p-3 mt-3" style={{ backgroundColor: "#f8f5f0" }}>
+                          <div className="d-flex justify-content-between">
+                            <span>
+                              Habitación ({getNoches()} {getNoches() === 1 ? "noche" : "noches"} · {formData.adultos} adulto{Number(formData.adultos) === 1 ? "" : "s"}
+                              {Number(formData.ninos) > 0 ? `, ${formData.ninos} niño${Number(formData.ninos) === 1 ? "" : "s"}` : ""}
+                              {Number(formData.bebes) > 0 ? `, ${formData.bebes} bebé${Number(formData.bebes) === 1 ? "" : "s"}` : ""})
+                            </span>
+                            <span>{formatCOP(totalHabitacion)}</span>
+                          </div>
+                          {serviciosSeleccionados.length > 0 && (
+                            <div className="d-flex justify-content-between">
+                              <span>Servicios adicionales ({personasPagantesServicios} {personasPagantesServicios === 1 ? "persona" : "personas"})</span>
+                              <span>{formatCOP(totalServicios)}</span>
+                            </div>
+                          )}
+                          <hr className="my-2" />
+                          <div className="d-flex justify-content-between fw-bold">
+                            <span>Total</span>
+                            <span>{formatCOP(totalGeneral)}</span>
                           </div>
                         </div>
                       </div>
@@ -731,7 +656,7 @@ function ReservasView() {
                       <button
                         type="submit"
                         className="btn btn-primary btn-lg w-100"
-                        disabled={loading || !showAvailable || habitacionesDisponibles === 0}
+                        disabled={loading || !fechasCompletas}
                       >
                         {loading ? (
                           <>
@@ -753,68 +678,6 @@ function ReservasView() {
           </div>
         </div>
       </div>
-
-      {/* Modal de Check-in del cliente */}
-      {reservaParaCheckin && (
-        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {checkinCompletado ? "¡Check-in confirmado!" : "Antes de tu check-in"}
-                </h5>
-                <button type="button" className="btn-close" onClick={closeCheckinModal}></button>
-              </div>
-              <div className="modal-body">
-                {checkinCompletado ? (
-                  <div className="text-center py-3">
-                    <i className="bi bi-check-circle text-success" style={{ fontSize: "3rem" }}></i>
-                    <p className="mt-3 mb-0">
-                      Tu check-in quedó registrado y ya tienes una habitación asignada.
-                      Puedes verla en la tabla de "Mis Reservas".
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="fw-semibold mb-2">Normas de la estadía</p>
-                    <ul className="mb-3">
-                      <li>El horario de check-out es hasta las 12:00 m.</li>
-                      <li>No se permite fumar dentro de las habitaciones.</li>
-                      <li>No se permiten mascotas ni visitantes no registrados.</li>
-                      <li>Debes presentar tu documento de identidad al personal si te lo solicitan.</li>
-                      <li>Cualquier daño a la habitación será cobrado según el reglamento del hotel.</li>
-                    </ul>
-                    <p className="text-muted small mb-0">
-                      Al confirmar, aceptas estas condiciones para tu estadía.
-                    </p>
-                  </>
-                )}
-              </div>
-              <div className="modal-footer">
-                {checkinCompletado ? (
-                  <button type="button" className="btn btn-primary" onClick={closeCheckinModal}>
-                    Cerrar
-                  </button>
-                ) : (
-                  <>
-                    <button type="button" className="btn btn-secondary" onClick={closeCheckinModal}>
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-success"
-                      disabled={checkinEnCurso === reservaParaCheckin.id_reserva}
-                      onClick={handleConfirmarCheckinPropio}
-                    >
-                      {checkinEnCurso === reservaParaCheckin.id_reserva ? "Procesando..." : "Acepto, confirmar check-in"}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

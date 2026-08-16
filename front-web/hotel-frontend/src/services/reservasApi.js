@@ -24,8 +24,15 @@ export const getMisReservas = async () => {
   return response.data;
 };
 
-export const checkinReserva = async (idReserva, numeroHabitacion) => {
-  const body = numeroHabitacion ? { numero_habitacion: numeroHabitacion } : {};
+export const getServiciosAdicionales = async () => {
+  const response = await api.get("/reservas/servicios-adicionales");
+  return response.data;
+};
+
+export const checkinReserva = async (idReserva, numeroHabitacion, serviciosAdicionales) => {
+  const body = {};
+  if (numeroHabitacion) body.numero_habitacion = numeroHabitacion;
+  if (serviciosAdicionales && serviciosAdicionales.length > 0) body.servicios_adicionales = serviciosAdicionales;
   const response = await api.post(`/reservas/${idReserva}/checkin`, body);
   return response.data;
 };

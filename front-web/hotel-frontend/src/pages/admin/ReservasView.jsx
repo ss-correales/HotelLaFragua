@@ -3,9 +3,18 @@ import {
   getReservas,
   crearReserva,
   checkinReserva,
-  checkoutReserva
+  checkoutReserva,
+  getServiciosAdicionales
 } from "../../services/reservasApi";
 import { getHabitaciones } from "../../services/habitacionesApi";
+
+// "YYYY-MM-DD" se interpreta como medianoche UTC si se pasa directo a `new Date()`,
+// lo que corre la fecha un día atrás en zonas horarias detrás de UTC (como Colombia).
+const parseFechaLocal = (fechaStr) => {
+  if (!fechaStr) return null;
+  const [year, month, day] = fechaStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
 
 function ReservasView() {
   const [reservas, setReservas] = useState([]);
@@ -19,8 +28,13 @@ function ReservasView() {
     identificacion_cliente: "",
     tipo_habitacion: "Individual",
     fecha_inicio: "",
-    fecha_fin: ""
+    fecha_fin: "",
+    adultos: 1,
+    ninos: 0,
+    bebes: 0
   });
+
+  const [habitacionesCatalogo, setHabitacionesCatalogo] = useState([]);
 
   // Check-in
   const [showCheckinModal, setShowCheckinModal] = useState(false);
@@ -28,6 +42,22 @@ function ReservasView() {
   const [habitacionesDisponibles, setHabitacionesDisponibles] = useState([]);
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState("");
   const [checkinLoading, setCheckinLoading] = useState(false);
+  const [serviciosDisponibles, setServiciosDisponibles] = useState([]);
+  const [serviciosCheckin, setServiciosCheckin] = useState([]);
+  const [checkinFinalizado, setCheckinFinalizado] = useState(false);
+
+  useEffect(() => {
+    getHabitaciones().then(setHabitacionesCatalogo).catch((error) => console.error("Error cargando habitaciones:", error));
+  }, []);
+
+  const getOcupacionMaxima = (tipo) => {
+    const habitacion = habitacionesCatalogo.find((h) => h.tipo_habitacion === tipo);
+    return habitacion ? Number(habitacion.ocupacion) : 1;
+  };
+
+  useEffect(() => {
+    getServiciosAdicionales().then(setServiciosDisponibles).catch((error) => console.error("Error cargando servicios adicionales:", error));
+  }, []);
 
   useEffect(() => {
     cargarDatos();
@@ -71,7 +101,10 @@ function ReservasView() {
       identificacion_cliente: "",
       tipo_habitacion: "Individual",
       fecha_inicio: "",
-      fecha_fin: ""
+      fecha_fin: "",
+      adultos: 1,
+      ninos: 0,
+      bebes: 0
     });
   };
 
@@ -84,6 +117,7 @@ function ReservasView() {
   const handleAbrirCheckin = async (reserva) => {
     setReservaParaCheckin(reserva);
     setHabitacionSeleccionada("");
+    setServiciosCheckin([]);
     setShowCheckinModal(true);
     try {
       const todas = await getHabitaciones();
@@ -100,6 +134,14 @@ function ReservasView() {
     setReservaParaCheckin(null);
     setHabitacionesDisponibles([]);
     setHabitacionSeleccionada("");
+    setServiciosCheckin([]);
+    setCheckinFinalizado(false);
+  };
+
+  const toggleServicioCheckin = (nombre) => {
+    setServiciosCheckin((prev) =>
+      prev.includes(nombre) ? prev.filter((s) => s !== nombre) : [...prev, nombre]
+    );
   };
 
   const colorEstadoHabitacion = (estado) => {
@@ -118,11 +160,11 @@ function ReservasView() {
     try {
       await checkinReserva(
         reservaParaCheckin.id_reserva,
-        habitacionSeleccionada ? parseInt(habitacionSeleccionada, 10) : undefined
+        habitacionSeleccionada ? parseInt(habitacionSeleccionada, 10) : undefined,
+        serviciosCheckin
       );
-      alert("Check-in realizado correctamente");
       await cargarDatos();
-      closeCheckinModal();
+      setCheckinFinalizado(true);
     } catch (error) {
       console.error("Error en check-in:", error);
       alert("Error al hacer check-in: " + (error.response?.data?.detail || "Intenta nuevamente"));
@@ -181,7 +223,7 @@ function ReservasView() {
   }
 
   return (
-    <div className="py-4">
+    <div className="container-fluid px-4 py-4">
       {/* Estadísticas */}
       {estadisticas && (
         <div className="row mb-4">
@@ -316,12 +358,12 @@ function ReservasView() {
                       </td>
                       <td className="align-middle text-center">
                         <span className="small">
-                          {reserva.fecha_inicio ? new Date(reserva.fecha_inicio).toLocaleDateString() : ""}
+                          {reserva.fecha_inicio ? parseFechaLocal(reserva.fecha_inicio).toLocaleDateString() : ""}
                         </span>
                       </td>
                       <td className="align-middle text-center">
                         <span className="small">
-                          {reserva.fecha_fin ? new Date(reserva.fecha_fin).toLocaleDateString() : ""}
+                          {reserva.fecha_fin ? parseFechaLocal(reserva.fecha_fin).toLocaleDateString() : ""}
                         </span>
                       </td>
                       <td className="align-middle text-center">
@@ -422,6 +464,50 @@ function ReservasView() {
                     </div>
                   </div>
                   <div className="row g-3 mt-1">
+                    <div className="col-12">
+                      <label className="form-label fw-bold text-primary">
+                        Huéspedes
+                        <span className="text-muted fw-normal"> (máx. {getOcupacionMaxima(formDataReserva.tipo_habitacion)} en total)</span>
+                      </label>
+                      <div className="row g-2">
+                        <div className="col-4">
+                          <label className="form-label small text-muted mb-1">Adultos (11+)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="adultos"
+                            min="1"
+                            value={formDataReserva.adultos}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <div className="col-4">
+                          <label className="form-label small text-muted mb-1">Niños (3-10)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="ninos"
+                            min="0"
+                            value={formDataReserva.ninos}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="col-4">
+                          <label className="form-label small text-muted mb-1">Bebés (0-2)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="bebes"
+                            min="0"
+                            value={formDataReserva.bebes}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row g-3 mt-1">
                     <div className="col-md-6">
                       <label className="form-label fw-bold text-primary">Fecha Inicio</label>
                       <input
@@ -472,11 +558,28 @@ function ReservasView() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  Check-in — Reserva #{reservaParaCheckin.id_reserva}
+                  {checkinFinalizado ? "Check-in listo — léele esto al huésped" : `Check-in — Reserva #${reservaParaCheckin.id_reserva}`}
                 </h5>
                 <button type="button" className="btn-close" onClick={closeCheckinModal}></button>
               </div>
               <div className="modal-body">
+                {checkinFinalizado ? (
+                  <>
+                    <div className="alert alert-success">
+                      <i className="bi bi-check-circle me-2"></i>
+                      Check-in confirmado{serviciosCheckin.length > 0 ? " — se generó una factura adicional por los servicios agregados." : "."}
+                    </div>
+                    <p className="fw-semibold mb-2">Normas de la estadía (léeselas al huésped)</p>
+                    <ul className="mb-0">
+                      <li>El horario de check-out es hasta las 12:00 m.</li>
+                      <li>No se permite fumar dentro de las habitaciones.</li>
+                      <li>No se permiten mascotas ni visitantes no registrados.</li>
+                      <li>Debe presentar su documento de identidad si el personal se lo solicita.</li>
+                      <li>Cualquier daño a la habitación será cobrado según el reglamento del hotel.</li>
+                    </ul>
+                  </>
+                ) : (
+                  <>
                 <p className="mb-3">
                   Tipo de habitación: <strong>{reservaParaCheckin.tipo_habitacion}</strong>
                 </p>
@@ -515,21 +618,59 @@ function ReservasView() {
                         );
                       })}
                     </div>
+
+                    {serviciosDisponibles.length > 0 && (
+                      <div className="mt-4">
+                        <p className="small fw-semibold mb-2">
+                          ¿Ofrecer algún servicio adicional de último momento? (opcional, se factura aparte)
+                        </p>
+                        <div className="row g-2">
+                          {serviciosDisponibles.map((servicio) => (
+                            <div className="col-md-6" key={servicio.nombre}>
+                              <label className="d-flex align-items-center justify-content-between border rounded p-2 small" style={{ cursor: "pointer" }}>
+                                <span>
+                                  <input
+                                    type="checkbox"
+                                    className="form-check-input me-2"
+                                    checked={serviciosCheckin.includes(servicio.nombre)}
+                                    onChange={() => toggleServicioCheckin(servicio.nombre)}
+                                  />
+                                  {servicio.nombre}
+                                </span>
+                                <span className="text-muted">
+                                  {servicio.precio.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })}
+                                </span>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
                   </>
                 )}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={closeCheckinModal}>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-success"
-                  disabled={!habitacionSeleccionada || checkinLoading}
-                  onClick={handleConfirmarCheckin}
-                >
-                  {checkinLoading ? "Procesando..." : "Confirmar check-in"}
-                </button>
+                {checkinFinalizado ? (
+                  <button type="button" className="btn btn-primary" onClick={closeCheckinModal}>
+                    Listo
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className="btn btn-secondary" onClick={closeCheckinModal}>
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-success"
+                      disabled={!habitacionSeleccionada || checkinLoading}
+                      onClick={handleConfirmarCheckin}
+                    >
+                      {checkinLoading ? "Procesando..." : "Confirmar check-in"}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
