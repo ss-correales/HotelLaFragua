@@ -19,6 +19,30 @@ CLIENTES_SERVICE_URL = os.getenv("CLIENTES_SERVICE_URL", "http://localhost:8081"
 HABITACIONES_SERVICE_URL = os.getenv("HABITACIONES_SERVICE_URL", "http://localhost:8082/api")
 FACTURACION_SERVICE_URL = os.getenv("FACTURACION_SERVICE_URL", "http://localhost:8084")
 
+# Catálogo de servicios adicionales (valores inventados, pendiente definir precios reales)
+# por_persona=True → el precio se multiplica por (adultos + ninos) de la reserva; los bebés no pagan servicios
+# El desayuno viene incluido en el precio de la habitación, no es un servicio aparte.
+# El restaurante (almuerzo/cena) se paga directo con el personal del hotel, fuera de este sistema.
+SERVICIOS_ADICIONALES = {
+    "Acceso a spa": {"precio": 40000, "categoria": "Gastronomía y bienestar", "por_persona": False},
+    "Masaje relajante": {"precio": 80000, "categoria": "Gastronomía y bienestar", "por_persona": True},
+    "Clase de yoga": {"precio": 30000, "categoria": "Gastronomía y bienestar", "por_persona": True},
+    "Paseo por el centro histórico": {"precio": 35000, "categoria": "Actividades y experiencias", "por_persona": True},
+    "Paseos rurales y miradores": {"precio": 50000, "categoria": "Actividades y experiencias", "por_persona": True},
+    "Rutas gastronómicas del pueblo": {"precio": 45000, "categoria": "Actividades y experiencias", "por_persona": True},
+}
+
+TARIFA_NINO = 0.5  # los niños (3-10 años) pagan la mitad de la tarifa de adulto; bebés (0-2) no pagan
+
+
+def calcular_total_servicios(nombres: list[str], adultos: int, ninos: int) -> float:
+    personas_pagantes = adultos + ninos  # los bebés no pagan servicios adicionales
+    total = 0
+    for nombre in nombres:
+        info = SERVICIOS_ADICIONALES[nombre]
+        total += info["precio"] * (personas_pagantes if info["por_persona"] else 1)
+    return total
+
 
 def verificar_cliente(id_cliente: int, auth_header: str | None = None) -> bool:
     try:
@@ -120,9 +144,24 @@ def crear_reserva(db: Session, reserva, canal: str = "Online", auth_header: str 
     if solapadas >= total_habitaciones:
         raise HTTPException(status_code=409, detail="No hay disponibilidad para el tipo de habitación en el periodo solicitado")
 
+    ocupacion_maxima = int(habitaciones_tipo[0]["ocupacion"])
+    total_huespedes = reserva.adultos + reserva.ninos + reserva.bebes
+    if total_huespedes > ocupacion_maxima:
+        raise HTTPException(status_code=400, detail=f"El tipo de habitación '{reserva.tipo_habitacion}' admite máximo {ocupacion_maxima} huéspedes")
+    if reserva.adultos < 1:
+        raise HTTPException(status_code=400, detail="La reserva debe tener al menos un adulto")
+
+    servicios = reserva.servicios_adicionales or []
+    invalidos = [s for s in servicios if s not in SERVICIOS_ADICIONALES]
+    if invalidos:
+        raise HTTPException(status_code=400, detail=f"Servicio adicional desconocido: {', '.join(invalidos)}")
+
     noches = (reserva.fecha_fin - reserva.fecha_inicio).days
     precio_noche = float(habitaciones_tipo[0]["precio_base"])
-    total = round(noches * precio_noche, 2)
+    factor_huespedes = reserva.adultos + reserva.ninos * TARIFA_NINO
+    total_habitacion = noches * precio_noche * factor_huespedes
+    total_servicios = calcular_total_servicios(servicios, reserva.adultos, reserva.ninos)
+    total = round(total_habitacion + total_servicios, 2)
 
     nueva_reserva = Reserva(
         identificacion_cliente=reserva.identificacion_cliente,
@@ -132,6 +171,10 @@ def crear_reserva(db: Session, reserva, canal: str = "Online", auth_header: str 
         fecha_fin=reserva.fecha_fin,
         estado="Pendiente",
         canal=canal,
+        servicios_adicionales=servicios,
+        adultos=reserva.adultos,
+        ninos=reserva.ninos,
+        bebes=reserva.bebes,
     )
 
     db.add(nueva_reserva)
@@ -177,7 +220,7 @@ def reservas_por_correo(db: Session, correo: str) -> list[Reserva]:
     return db.query(Reserva).filter(Reserva.identificacion_cliente == identificacion_cliente).all()
 
 
-def checkin_reserva(db: Session, id_reserva: int, current_user: dict, numero_habitacion: int | None = None, auth_header: str | None = None):
+def checkin_reserva(db: Session, id_reserva: int, current_user: dict, numero_habitacion: int | None = None, servicios_adicionales: list[str] | None = None, auth_header: str | None = None):
     reserva = obtener_reserva(db, id_reserva)
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
@@ -192,12 +235,20 @@ def checkin_reserva(db: Session, id_reserva: int, current_user: dict, numero_hab
         if numero_habitacion is not None:
             raise HTTPException(status_code=403, detail="Solo el personal del hotel puede elegir una habitación específica")
 
+        if servicios_adicionales:
+            raise HTTPException(status_code=403, detail="Solo el personal del hotel puede agregar servicios en el check-in")
+
         correo = current_user.get("correo") if isinstance(current_user, dict) else None
         if not correo or not es_dueno_de_reserva(correo, reserva.identificacion_cliente, auth_header):
             raise HTTPException(status_code=403, detail="No puedes hacer check-in de una reserva que no es tuya")
 
         if date.today() < reserva.fecha_inicio - timedelta(days=1):
             raise HTTPException(status_code=400, detail="El check-in solo está disponible desde 24 horas antes de la fecha de inicio")
+
+    servicios_nuevos = servicios_adicionales or []
+    invalidos = [s for s in servicios_nuevos if s not in SERVICIOS_ADICIONALES]
+    if invalidos:
+        raise HTTPException(status_code=400, detail=f"Servicio adicional desconocido: {', '.join(invalidos)}")
 
     habitaciones_disponibles = [h for h in obtener_habitaciones_por_tipo(reserva.tipo_habitacion) if h.get("estado") == "Libre"]
     if not habitaciones_disponibles:
@@ -227,8 +278,16 @@ def checkin_reserva(db: Session, id_reserva: int, current_user: dict, numero_hab
 
     reserva.numero_habitacion = numero_habitacion
     reserva.estado = "Confirmada"
+
+    if servicios_nuevos:
+        reserva.servicios_adicionales = list({*(reserva.servicios_adicionales or []), *servicios_nuevos})
+
     db.commit()
     db.refresh(reserva)
+
+    if servicios_nuevos:
+        total_servicios = calcular_total_servicios(servicios_nuevos, reserva.adultos, reserva.ninos)
+        generar_factura(reserva.id_reserva, total_servicios)
 
     return reserva
 

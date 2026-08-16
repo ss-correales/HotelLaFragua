@@ -23,6 +23,14 @@ def mis_reservas(db: Session = Depends(get_db), current_user = Depends(verify_to
     return crud.reservas_por_correo(db, correo)
 
 
+@router.get("/servicios-adicionales")
+def listar_servicios_adicionales():
+    return [
+        {"nombre": nombre, "precio": info["precio"], "categoria": info["categoria"], "por_persona": info["por_persona"]}
+        for nombre, info in crud.SERVICIOS_ADICIONALES.items()
+    ]
+
+
 @router.get("/disponibles")
 def verificar_disponibilidad(tipo_habitacion: str, fecha_inicio: date, fecha_fin: date, db: Session = Depends(get_db)):
     if fecha_inicio >= fecha_fin:
@@ -60,6 +68,7 @@ def checkin_reserva(id_reserva: int,
         db, id_reserva,
         current_user=current_user,
         numero_habitacion=checkin_data.numero_habitacion,
+        servicios_adicionales=checkin_data.servicios_adicionales,
         auth_header=request.headers.get("authorization"),
     )
 
