@@ -292,7 +292,7 @@ def checkin_reserva(db: Session, id_reserva: int, current_user: dict, numero_hab
     return reserva
 
 
-def checkout_reserva(db: Session, id_reserva: int, auth_header: str | None = None):
+def checkout_reserva(db: Session, id_reserva: int, monto_danos: float = 0, auth_header: str | None = None):
     reserva = obtener_reserva(db, id_reserva)
     if not reserva:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
@@ -319,6 +319,9 @@ def checkout_reserva(db: Session, id_reserva: int, auth_header: str | None = Non
     reserva.estado = "Finalizada"
     db.commit()
     db.refresh(reserva)
+
+    if monto_danos > 0:
+        generar_factura(reserva.id_reserva, monto_danos)
 
     return reserva
 

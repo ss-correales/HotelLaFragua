@@ -37,33 +37,9 @@ export const checkinReserva = async (idReserva, numeroHabitacion, serviciosAdici
   return response.data;
 };
 
-export const checkoutReserva = async (idReserva) => {
-  const response = await api.post(`/reservas/${idReserva}/checkout`, {});
-  return response.data;
-};
-
-export const actualizarReserva = async (id, reserva) => {
-  const response = await api.put(`/reservas/${id}`, reserva);
-  return response.data;
-};
-
-export const eliminarReserva = async (id) => {
-  const response = await api.delete(`/reservas/${id}`);
-  return response.data;
-};
-
-export const getReservasByCliente = async (idCliente) => {
-  const response = await api.get(`/reservas/cliente/${idCliente}`);
-  return response.data;
-};
-
-export const getReservasByHabitacion = async (idHabitacion) => {
-  const response = await api.get(`/reservas/habitacion/${idHabitacion}`);
-  return response.data;
-};
-
-export const getReservasByEstado = async (estado) => {
-  const response = await api.get(`/reservas/estado/${estado}`);
+export const checkoutReserva = async (idReserva, montoDanos) => {
+  const body = montoDanos > 0 ? { monto_danos: montoDanos } : {};
+  const response = await api.post(`/reservas/${idReserva}/checkout`, body);
   return response.data;
 };
 
@@ -72,19 +48,5 @@ export const getDisponibilidad = async (tipoHabitacion, fechaInicio, fechaFin) =
   const response = await api.get(`/reservas/disponibles`, {
     params: { tipo_habitacion: tipoHabitacion, fecha_inicio: fechaInicio, fecha_fin: fechaFin },
   });
-  return response.data;
-};
-
-// Cambiar estado de reserva
-export const cambiarEstadoReserva = async (id, nuevoEstado) => {
-  const response = await api.patch(`/reservas/${id}/estado`, {
-    estado: nuevoEstado
-  });
-  return response.data;
-};
-
-// Obtener estadísticas de reservas
-export const getEstadisticasReservas = async () => {
-  const response = await api.get("/reservas/estadisticas");
   return response.data;
 };

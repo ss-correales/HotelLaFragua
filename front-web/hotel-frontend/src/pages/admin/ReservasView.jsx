@@ -46,6 +46,12 @@ function ReservasView() {
   const [serviciosCheckin, setServiciosCheckin] = useState([]);
   const [checkinFinalizado, setCheckinFinalizado] = useState(false);
 
+  // Check-out
+  const [reservaParaCheckout, setReservaParaCheckout] = useState(null);
+  const [hayDanos, setHayDanos] = useState(false);
+  const [montoDanos, setMontoDanos] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   useEffect(() => {
     getHabitaciones().then(setHabitacionesCatalogo).catch((error) => console.error("Error cargando habitaciones:", error));
   }, []);
@@ -173,15 +179,36 @@ function ReservasView() {
     }
   };
 
-  const handleCheckout = async (id) => {
-    if (!window.confirm("¿Confirmar check-out de esta reserva?")) return;
+  const handleAbrirCheckout = (reserva) => {
+    setReservaParaCheckout(reserva);
+    setHayDanos(false);
+    setMontoDanos("");
+  };
+
+  const closeCheckoutModal = () => {
+    setReservaParaCheckout(null);
+    setHayDanos(false);
+    setMontoDanos("");
+  };
+
+  const handleConfirmarCheckout = async () => {
+    if (!reservaParaCheckout) return;
+    const monto = hayDanos ? parseFloat(montoDanos) || 0 : 0;
+    setCheckoutLoading(true);
     try {
-      await checkoutReserva(id);
-      alert("Check-out realizado correctamente");
+      await checkoutReserva(reservaParaCheckout.id_reserva, monto);
+      alert(
+        monto > 0
+          ? "Check-out realizado. Se generó una factura adicional por los daños reportados."
+          : "Check-out realizado correctamente"
+      );
       await cargarDatos();
+      closeCheckoutModal();
     } catch (error) {
       console.error("Error en check-out:", error);
       alert("Error al hacer check-out: " + (error.response?.data?.detail || "Intenta nuevamente"));
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -395,7 +422,7 @@ function ReservasView() {
                           {reserva.estado === 'Confirmada' && (
                             <button
                               className="btn btn-sm btn-outline-info"
-                              onClick={() => handleCheckout(reserva.id_reserva)}
+                              onClick={() => handleAbrirCheckout(reserva)}
                               title="Hacer check-out"
                             >
                               <i className="bi bi-box-arrow-right me-1"></i>
@@ -671,6 +698,71 @@ function ReservasView() {
                     </button>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Check-out */}
+      {reservaParaCheckout && (
+        <div className="modal show" style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Check-out — Reserva #{reservaParaCheckout.id_reserva} (Habitación {reservaParaCheckout.numero_habitacion})
+                </h5>
+                <button type="button" className="btn-close" onClick={closeCheckoutModal}></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">Verifica el estado de la habitación antes de cerrar el check-out.</p>
+
+                <div className="form-check mb-3">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="hayDanosCheck"
+                    checked={hayDanos}
+                    onChange={(e) => setHayDanos(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="hayDanosCheck">
+                    Se encontraron daños en la habitación
+                  </label>
+                </div>
+
+                {hayDanos && (
+                  <div>
+                    <label className="form-label fw-semibold">Monto a cobrar por los daños</label>
+                    <div className="input-group">
+                      <span className="input-group-text">$</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        min="0"
+                        placeholder="0"
+                        value={montoDanos}
+                        onChange={(e) => setMontoDanos(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-muted small mt-1 mb-0">
+                      Se generará una factura adicional por este monto, separada de la factura de la reserva.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={closeCheckoutModal}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-info"
+                  disabled={checkoutLoading || (hayDanos && (!montoDanos || parseFloat(montoDanos) <= 0))}
+                  onClick={handleConfirmarCheckout}
+                >
+                  {checkoutLoading ? "Procesando..." : "Confirmar check-out"}
+                </button>
               </div>
             </div>
           </div>

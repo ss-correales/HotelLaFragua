@@ -76,6 +76,11 @@ def checkin_reserva(id_reserva: int,
 @router.post("/{id_reserva}/checkout", response_model=schemas.ReservaResponse)
 def checkout_reserva(id_reserva: int,
                      request: Request,
+                     checkout_data: schemas.ReservaCheckout = schemas.ReservaCheckout(),
                      db=Depends(get_db),
                      current_user = Depends(require_admin)):
-    return crud.checkout_reserva(db, id_reserva, auth_header=request.headers.get("authorization"))
+    return crud.checkout_reserva(
+        db, id_reserva,
+        monto_danos=checkout_data.monto_danos,
+        auth_header=request.headers.get("authorization"),
+    )

@@ -21,6 +21,9 @@ class ReservaCheckin(BaseModel):
     numero_habitacion: Optional[int] = None
     servicios_adicionales: Optional[List[str]] = None
 
+class ReservaCheckout(BaseModel):
+    monto_danos: float = Field(0, ge=0)
+
 class ReservaResponse(ReservaBase):
     id_reserva: int
     numero_habitacion: Optional[int] = None
