@@ -28,13 +28,7 @@ function UsuariosManagement() {
     apellido_cliente: "",
     telefono_cliente: "",
     tipo_documento_cliente: "CC",
-    numero_documento_cliente: "",
-    // Campos adicionales para empleados
-    nombre_empleado: "",
-    apellido_empleado: "",
-    documento_empleado: "",
-    email_empleado: "",
-    telefono_empleado: ""
+    numero_documento_cliente: ""
   });
 
   useEffect(() => {
@@ -94,14 +88,6 @@ function UsuariosManagement() {
         }
         
         // Agregar campos específicos según el rol
-        if (formDataUsuario.roles.includes("Empleado")) {
-          usuarioData.nombre_empleado = formDataUsuario.nombre_empleado;
-          usuarioData.apellido_empleado = formDataUsuario.apellido_empleado;
-          usuarioData.documento_empleado = formDataUsuario.documento_empleado;
-          usuarioData.email_empleado = formDataUsuario.email_empleado;
-          usuarioData.telefono_empleado = formDataUsuario.telefono_empleado;
-        }
-        
         if (formDataUsuario.roles.includes("Cliente")) {
           usuarioData.nombre_cliente = formDataUsuario.nombre_cliente;
           usuarioData.apellido_cliente = formDataUsuario.apellido_cliente;
@@ -109,11 +95,11 @@ function UsuariosManagement() {
           usuarioData.tipo_documento_cliente = formDataUsuario.tipo_documento_cliente;
           usuarioData.numero_documento_cliente = formDataUsuario.numero_documento_cliente;
         }
-        
+
         if (formDataUsuario.contraseña) {
           usuarioData.contraseña = formDataUsuario.contraseña;
         }
-        
+
         await actualizarUsuario(editingUsuario.id_usuario, usuarioData);
       } else {
         // Generar nombre de usuario automáticamente o usar el proporcionado
@@ -121,9 +107,6 @@ function UsuariosManagement() {
         if (formDataUsuario.roles.includes("Administrador")) {
           // Para administradores, usar el nombre de usuario proporcionado
           nombreUsuarioFinal = formDataUsuario.nombre_usuario;
-        } else if (formDataUsuario.roles.includes("Empleado")) {
-          // Para empleados, generar automáticamente
-          nombreUsuarioFinal = `${formDataUsuario.nombre_empleado.toLowerCase().replace(/\s/g, '')}.${formDataUsuario.apellido_empleado.toLowerCase().replace(/\s/g, '')}`;
         } else if (formDataUsuario.roles.includes("Cliente")) {
           // Para clientes, generar automáticamente
           nombreUsuarioFinal = `${formDataUsuario.nombre_cliente.toLowerCase().replace(/\s/g, '')}.${formDataUsuario.apellido_cliente.toLowerCase().replace(/\s/g, '')}`;
@@ -142,14 +125,6 @@ function UsuariosManagement() {
         };
         
         // Agregar campos específicos según el rol
-        if (formDataUsuario.roles.includes("Empleado")) {
-          usuarioData.nombre_empleado = formDataUsuario.nombre_empleado;
-          usuarioData.apellido_empleado = formDataUsuario.apellido_empleado;
-          usuarioData.documento_empleado = formDataUsuario.documento_empleado;
-          usuarioData.email_empleado = formDataUsuario.email_empleado;
-          usuarioData.telefono_empleado = formDataUsuario.telefono_empleado;
-        }
-        
         if (formDataUsuario.roles.includes("Cliente")) {
           usuarioData.nombre_cliente = formDataUsuario.nombre_cliente;
           usuarioData.apellido_cliente = formDataUsuario.apellido_cliente;
@@ -157,7 +132,7 @@ function UsuariosManagement() {
           usuarioData.tipo_documento_cliente = formDataUsuario.tipo_documento_cliente;
           usuarioData.numero_documento_cliente = formDataUsuario.numero_documento_cliente;
         }
-        
+
         await crearUsuario(usuarioData);
       }
       
@@ -186,13 +161,7 @@ function UsuariosManagement() {
       apellido_cliente: usuario.apellido_cliente || "",
       telefono_cliente: usuario.telefono_cliente || "",
       tipo_documento_cliente: usuario.tipo_documento_cliente || "CC",
-      numero_documento_cliente: usuario.numero_documento_cliente || "",
-      // Campos adicionales para empleados (si existen)
-      nombre_empleado: usuario.nombre_empleado || "",
-      apellido_empleado: usuario.apellido_empleado || "",
-      documento_empleado: usuario.documento_empleado || "",
-      email_empleado: usuario.email_empleado || "",
-      telefono_empleado: usuario.telefono_empleado || ""
+      numero_documento_cliente: usuario.numero_documento_cliente || ""
     });
     setShowModalUsuario(true);
   };
@@ -240,13 +209,7 @@ function UsuariosManagement() {
       apellido_cliente: "",
       telefono_cliente: "",
       tipo_documento_cliente: "CC",
-      numero_documento_cliente: "",
-      // Campos adicionales para empleados
-      nombre_empleado: "",
-      apellido_empleado: "",
-      documento_empleado: "",
-      email_empleado: "",
-      telefono_empleado: ""
+      numero_documento_cliente: ""
     });
     setEditingUsuario(null);
   };
@@ -756,62 +719,14 @@ function UsuariosManagement() {
                             </div>
                             <div>
                               <h5 className="mb-1 fw-bold" style={{ color: "#a67c52" }}>
-                                Datos del Empleado
+                                Acceso del Empleado
                               </h5>
-                              <small style={{ color: "#6c757d" }}>Información del personal del hotel</small>
+                              <small style={{ color: "#6c757d" }}>
+                                Solo las credenciales de acceso al sistema. Los datos de personal (nombre, cargo, documento) se gestionan en la pestaña "Empleados del Hotel".
+                              </small>
                             </div>
                           </div>
                           <div className="row g-4">
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-person me-1"></i>
-                                Nombre <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control form-control-lg border-2"
-                                name="nombre_empleado"
-                                value={formDataUsuario.nombre_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="Nombre completo"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-person me-1"></i>
-                                Apellido <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control form-control-lg border-2"
-                                name="apellido_empleado"
-                                value={formDataUsuario.apellido_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="Apellido completo"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                          </div>
-                          <div className="row g-4">
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-card-text me-1"></i>
-                                Documento <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control form-control-lg border-2"
-                                name="documento_empleado"
-                                value={formDataUsuario.documento_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="123456789"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
                             <div className="col-md-6">
                               <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
                                 <i className="bi bi-envelope me-1"></i>
@@ -825,24 +740,6 @@ function UsuariosManagement() {
                                 onChange={handleInputChange}
                                 required
                                 placeholder="empleado@ejemplo.com"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                          </div>
-                          <div className="row g-4">
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-telephone me-1"></i>
-                                Teléfono <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="tel"
-                                className="form-control form-control-lg border-2"
-                                name="telefono_empleado"
-                                value={formDataUsuario.telefono_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="3001234567"
                                 style={{ borderColor: "#a67c52" }}
                               />
                             </div>
