@@ -36,6 +36,8 @@ def registrar_pago(id_factura: int, pago: schemas.PagoCreate, db: Session = Depe
     factura = crud.obtener_factura(db, id_factura)
     if not factura:
         raise HTTPException(status_code=404, detail="Factura no encontrada")
+    if factura.estado == "pagada":
+        raise HTTPException(status_code=400, detail="La factura ya está pagada")
     return crud.crear_pago(db, id_factura, pago)
 
 

@@ -45,6 +45,10 @@ def crear_pago(db: Session, id_factura: int, pago):
     )
 
     db.add(nuevo)
+
+    factura = obtener_factura(db, id_factura)
+    factura.estado = "pagada"
+
     db.commit()
     db.refresh(nuevo)
     return nuevo

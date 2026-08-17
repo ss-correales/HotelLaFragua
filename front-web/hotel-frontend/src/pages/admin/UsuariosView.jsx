@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import UsuariosManagement from "./UsuariosManagement";
 import ClientesView from "./ClientesView";
+import EmpleadosView from "./EmpleadosView";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../../assets/css/hotel-styles.css";
@@ -49,10 +50,10 @@ function UsuariosView() {
                       </button>
                     </li>
                     <li className="nav-item" role="presentation">
-                      <button 
+                      <button
                         className={`nav-link ${activeTab === "clientes" ? "active" : ""}`}
                         onClick={() => setActiveTab("clientes")}
-                        style={{ 
+                        style={{
                           color: activeTab === "clientes" ? "#a67c52" : "#6c757d",
                           borderColor: activeTab === "clientes" ? "#a67c52" : "transparent"
                         }}
@@ -61,6 +62,21 @@ function UsuariosView() {
                       >
                         <i className="bi bi-people me-2"></i>
                         Clientes del Hotel
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button
+                        className={`nav-link ${activeTab === "empleados" ? "active" : ""}`}
+                        onClick={() => setActiveTab("empleados")}
+                        style={{
+                          color: activeTab === "empleados" ? "#a67c52" : "#6c757d",
+                          borderColor: activeTab === "empleados" ? "#a67c52" : "transparent"
+                        }}
+                        type="button"
+                        role="tab"
+                      >
+                        <i className="bi bi-person-workspace me-2"></i>
+                        Empleados del Hotel
                       </button>
                     </li>
                   </ul>
@@ -77,6 +93,12 @@ function UsuariosView() {
                 {activeTab === "clientes" && (
                   <div className="tab-pane fade show active">
                     <ClientesView />
+                  </div>
+                )}
+
+                {activeTab === "empleados" && (
+                  <div className="tab-pane fade show active">
+                    <EmpleadosView />
                   </div>
                 )}
               </div>

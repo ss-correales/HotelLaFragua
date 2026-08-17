@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Habitaciones from "./pages/admin/Habitaciones.jsx";
 import UsuariosView from "./pages/admin/UsuariosView.jsx";
 import AdminReservasView from "./pages/admin/ReservasView.jsx";
+import FacturasView from "./pages/admin/FacturasView.jsx";
 import LoginAdmin from "./pages/admin/LoginAdmin.jsx";
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           <Route path="habitaciones" element={<Habitaciones />} />
           <Route path="usuarios" element={<UsuariosView />} />
           <Route path="reservas" element={<AdminReservasView />} />
+          <Route path="facturas" element={<FacturasView />} />
           <Route path="login" element={<LoginAdmin />} />
         </Route>
       </Routes>
