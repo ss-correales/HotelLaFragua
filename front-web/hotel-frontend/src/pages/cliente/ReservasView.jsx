@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
+<<<<<<< Updated upstream
 import { crearReserva, getHabitacionesDisponibles } from "../../services/reservasApi";
+=======
+import { useLocation, useNavigate } from "react-router-dom";
+import { crearReserva, getServiciosAdicionales, iniciarPagoWompi } from "../../services/reservasApi";
+import { getHabitaciones } from "../../services/habitacionesApi";
+>>>>>>> Stashed changes
 import DatePicker from "react-datepicker";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -31,6 +37,8 @@ function ReservasView() {
   const [loading, setLoading] = useState(false);
   const [showAvailable, setShowAvailable] = useState(false);
   const [reservaSuccess, setReservaSuccess] = useState(false);
+  const [reservaCreada, setReservaCreada] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Verificar autenticación y cargar datos del cliente
   useEffect(() => {
@@ -137,8 +145,14 @@ function ReservasView() {
         fecha_inicio: formData.fecha_inicio,
         fecha_fin: formData.fecha_fin
       };
+<<<<<<< Updated upstream
       
       await crearReserva(reservaData);
+=======
+
+      const nuevaReserva = await crearReserva(reservaData);
+      setReservaCreada(nuevaReserva);
+>>>>>>> Stashed changes
       setReservaSuccess(true);
       
       // Resetear formulario
@@ -155,6 +169,38 @@ function ReservasView() {
       alert('Error al crear la reserva: ' + (error.response?.data?.message || 'Intenta nuevamente'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePagarConWompi = async () => {
+    if (!reservaCreada) return;
+    setPaymentLoading(true);
+    try {
+      const checkout = await iniciarPagoWompi(reservaCreada.id_reserva);
+      const form = document.createElement("form");
+      form.method = "GET";
+      form.action = "https://checkout.wompi.co/p/";
+      const fields = {
+        "public-key": checkout.public_key,
+        currency: checkout.currency,
+        "amount-in-cents": checkout.amount_in_cents,
+        reference: checkout.reference,
+        "signature:integrity": checkout.integrity_signature,
+        "redirect-url": checkout.redirect_url,
+      };
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error) {
+      console.error("Error iniciando pago Wompi:", error);
+      alert(error.response?.data?.detail || "No fue posible iniciar el pago. Intenta nuevamente.");
+      setPaymentLoading(false);
     }
   };
 
@@ -259,7 +305,15 @@ function ReservasView() {
               Tu reserva ha sido creada exitosamente. Pronto recibirás un correo de confirmación con todos los detalles.
             </p>
             <div className="d-flex gap-3 justify-content-center">
+<<<<<<< Updated upstream
               <button 
+=======
+              <button className="btn btn-success btn-lg" onClick={handlePagarConWompi} disabled={paymentLoading}>
+                <i className="bi bi-credit-card me-2"></i>
+                {paymentLoading ? "Preparando pago..." : "Pagar con Wompi"}
+              </button>
+              <button
+>>>>>>> Stashed changes
                 className="btn btn-primary btn-lg"
                 onClick={() => setReservaSuccess(false)}
               >
