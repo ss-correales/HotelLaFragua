@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-<<<<<<< Updated upstream
-import { crearReserva, getHabitacionesDisponibles } from "../../services/reservasApi";
-=======
-import { useLocation, useNavigate } from "react-router-dom";
-import { crearReserva, getServiciosAdicionales, iniciarPagoWompi } from "../../services/reservasApi";
-import { getHabitaciones } from "../../services/habitacionesApi";
->>>>>>> Stashed changes
+import { crearReserva, getHabitacionesDisponibles, iniciarPagoWompi } from "../../services/reservasApi";
 import DatePicker from "react-datepicker";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -145,14 +139,8 @@ function ReservasView() {
         fecha_inicio: formData.fecha_inicio,
         fecha_fin: formData.fecha_fin
       };
-<<<<<<< Updated upstream
-      
-      await crearReserva(reservaData);
-=======
-
       const nuevaReserva = await crearReserva(reservaData);
       setReservaCreada(nuevaReserva);
->>>>>>> Stashed changes
       setReservaSuccess(true);
       
       // Resetear formulario
@@ -305,15 +293,11 @@ function ReservasView() {
               Tu reserva ha sido creada exitosamente. Pronto recibirás un correo de confirmación con todos los detalles.
             </p>
             <div className="d-flex gap-3 justify-content-center">
-<<<<<<< Updated upstream
-              <button 
-=======
               <button className="btn btn-success btn-lg" onClick={handlePagarConWompi} disabled={paymentLoading}>
                 <i className="bi bi-credit-card me-2"></i>
                 {paymentLoading ? "Preparando pago..." : "Pagar con Wompi"}
               </button>
               <button
->>>>>>> Stashed changes
                 className="btn btn-primary btn-lg"
                 onClick={() => setReservaSuccess(false)}
               >

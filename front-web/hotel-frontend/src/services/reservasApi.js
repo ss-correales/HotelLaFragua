@@ -57,7 +57,6 @@ export const crearReserva = async (reserva) => {
   }
 };
 
-<<<<<<< Updated upstream
 export const actualizarReserva = async (id, reserva) => {
   try {
     const response = await api.put(`/reservas/${id}`, reserva, {
@@ -68,16 +67,18 @@ export const actualizarReserva = async (id, reserva) => {
     console.error("Error actualizando reserva:", error);
     throw error;
   }
-=======
-export const iniciarPagoWompi = async (idReserva) => {
-  const response = await api.post(`/reservas/${idReserva}/pago/wompi/checkout`);
-  return response.data;
 };
 
-export const getMisReservas = async () => {
-  const response = await api.get("/reservas/mias");
-  return response.data;
->>>>>>> Stashed changes
+export const iniciarPagoWompi = async (idReserva) => {
+  try {
+    const response = await api.post(`/reservas/${idReserva}/pago/wompi/checkout`, {}, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error iniciando pago Wompi:", error);
+    throw error;
+  }
 };
 
 export const eliminarReserva = async (id) => {
