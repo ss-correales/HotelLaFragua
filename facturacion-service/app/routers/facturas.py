@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import crud, schemas
@@ -39,6 +39,21 @@ def registrar_pago(id_factura: int, pago: schemas.PagoCreate, db: Session = Depe
     if factura.estado == "pagada":
         raise HTTPException(status_code=400, detail="La factura ya está pagada")
     return crud.crear_pago(db, id_factura, pago)
+
+
+@router.post("/reserva/{id_reserva}/wompi/checkout", response_model=schemas.WompiCheckoutResponse)
+def iniciar_checkout_wompi(id_reserva: int, db: Session = Depends(get_db), current_user = Depends(require_admin)):
+    """Endpoint interno; reservas-service valida previamente al cliente."""
+    return crud.iniciar_checkout_wompi(db, id_reserva)
+
+
+@router.post("/webhooks/wompi", status_code=200, include_in_schema=False)
+async def webhook_wompi(request: Request, db: Session = Depends(get_db)):
+    evento = await request.json()
+    if not crud.validar_evento_wompi(evento):
+        raise HTTPException(status_code=400, detail="Firma de evento Wompi invalida")
+    crud.procesar_evento_wompi(db, evento)
+    return {"received": True}
 
 
 @router.get("/{id_factura}/pagos", response_model=list[schemas.PagoResponse])

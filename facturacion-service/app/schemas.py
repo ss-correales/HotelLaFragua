@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 
 class PagoBase(BaseModel):
@@ -16,9 +16,21 @@ class PagoResponse(PagoBase):
     id_pago: int
     id_factura: int
     fecha_pago: date
+    referencia_wompi: Optional[str] = None
+    transaccion_wompi_id: Optional[str] = None
+    estado_wompi: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class WompiCheckoutResponse(BaseModel):
+    public_key: str
+    currency: Literal["COP"] = "COP"
+    amount_in_cents: int
+    reference: str
+    integrity_signature: str
+    redirect_url: str
 
 
 class FacturaBase(BaseModel):

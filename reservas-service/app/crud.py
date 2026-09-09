@@ -199,6 +199,19 @@ def obtener_reserva(db: Session, id_reserva: int):
     return db.query(Reserva).filter(Reserva.id_reserva == id_reserva).first()
 
 
+def confirmar_pago_reserva(db: Session, id_reserva: int):
+    reserva = obtener_reserva(db, id_reserva)
+    if not reserva:
+        raise HTTPException(status_code=404, detail="Reserva no encontrada")
+    if reserva.estado == "Pendiente":
+        reserva.estado = "Confirmada"
+        db.commit()
+        db.refresh(reserva)
+    elif reserva.estado != "Confirmada":
+        raise HTTPException(status_code=400, detail="La reserva no puede confirmarse en su estado actual")
+    return reserva
+
+
 def reservas_por_correo(db: Session, correo: str) -> list[Reserva]:
     try:
         response = requests.get(

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from fastapi import HTTPException, status, Depends
@@ -81,3 +82,13 @@ def require_admin(payload = Depends(verify_token)):
             detail="Requiere rol de Administrador",
         )
     return payload
+
+
+def generar_token_sistema() -> str:
+    """Genera un JWT corto para comunicaciones autenticadas entre servicios."""
+    payload = {
+        "sub": "facturacion-service",
+        "roles": ["Administrador"],
+        "exp": datetime.utcnow() + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, _get_secret_key(), algorithm=ALGORITHM)

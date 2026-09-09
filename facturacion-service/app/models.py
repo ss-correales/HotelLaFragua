@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, String, Date, ForeignKey, Enum
+from sqlalchemy import Column, Integer, Float, String, Date, DateTime, ForeignKey, Enum, JSON
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import date
@@ -24,5 +24,12 @@ class Pago(Base):
     metodo_pago = Column(String(50), nullable=False)
     monto = Column(Float, nullable=False)
     fecha_pago = Column(Date, default=date.today)
+    referencia_wompi = Column(String(100), unique=True, index=True, nullable=True)
+    transaccion_wompi_id = Column(String(100), unique=True, index=True, nullable=True)
+    estado_wompi = Column(String(20), nullable=True)
+    monto_centavos = Column(Integer, nullable=True)
+    moneda = Column(String(3), nullable=True)
+    evento_wompi = Column(JSON, nullable=True)
+    fecha_confirmacion = Column(DateTime, nullable=True)
 
     factura = relationship("Factura", back_populates="pagos")
