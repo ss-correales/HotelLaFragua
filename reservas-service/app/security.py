@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from fastapi import HTTPException, status, Depends
@@ -60,10 +61,39 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
                 detail="Token inválido",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return user_identity
+        return payload
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def require_admin(payload = Depends(verify_token)):
+    """Exige que el usuario autenticado tenga el rol Administrador."""
+    if not _is_auth_enabled():
+        return payload
+
+    roles = payload.get("roles", []) if isinstance(payload, dict) else []
+    if "Administrador" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requiere rol de Administrador",
+        )
+    return payload
+
+
+def generar_token_sistema() -> str:
+    """
+    Token de corta duración para llamadas entre servicios que no vienen
+    de un usuario (ej. el job de APScheduler que finaliza reservas vencidas).
+    Usa el mismo SECRET_KEY compartido, asi que los demas servicios lo
+    validan igual que un token normal.
+    """
+    payload = {
+        "sub": "reservas-service-scheduler",
+        "roles": ["Administrador"],
+        "exp": datetime.utcnow() + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, _get_secret_key(), algorithm=ALGORITHM)

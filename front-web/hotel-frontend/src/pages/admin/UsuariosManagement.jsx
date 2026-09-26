@@ -5,8 +5,6 @@ import {
   crearUsuario, 
   actualizarUsuario
 } from "../../services/usuariosApi";
-import { crearCliente, getClientePorCorreo, actualizarCliente } from "../../services/clientesApi";
-import { crearEmpleado, getEmpleados, eliminarEmpleado, actualizarEmpleado } from "../../services/empleadosApi";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../../assets/css/hotel-styles.css";
@@ -17,50 +15,21 @@ function UsuariosManagement() {
   const [loading, setLoading] = useState(true);
   const [showModalUsuario, setShowModalUsuario] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
-  const [originalRoles, setOriginalRoles] = useState([]);
   const [searchUsuario, setSearchUsuario] = useState("");
   const [formDataUsuario, setFormDataUsuario] = useState({
     correo: "",
     contraseña: "",
     roles: [],
     estado: true,
-    numero_documento: "",
+    numero_identificacion: "",
     nombre_usuario: "",
     // Campos adicionales para clientes
     nombre_cliente: "",
     apellido_cliente: "",
     telefono_cliente: "",
     tipo_documento_cliente: "CC",
-    numero_documento_cliente: "",
-    // Campos adicionales para empleados
-    nombre_empleado: "",
-    apellido_empleado: "",
-    cargo_empleado: "",
-    telefono_empleado: ""
+    numero_documento_cliente: ""
   });
-
-  const applyRoleChange = (prev, nuevoRol) => {
-    const next = {
-      ...prev,
-      roles: [nuevoRol]
-    };
-
-    if (nuevoRol === "Empleado") {
-      if (!next.nombre_empleado && next.nombre_cliente) next.nombre_empleado = next.nombre_cliente;
-      if (!next.apellido_empleado && next.apellido_cliente) next.apellido_empleado = next.apellido_cliente;
-      if (!next.telefono_empleado && next.telefono_cliente) next.telefono_empleado = next.telefono_cliente;
-      if (!next.numero_documento && next.numero_documento_cliente) next.numero_documento = next.numero_documento_cliente;
-    }
-
-    if (nuevoRol === "Cliente") {
-      if (!next.nombre_cliente && next.nombre_empleado) next.nombre_cliente = next.nombre_empleado;
-      if (!next.apellido_cliente && next.apellido_empleado) next.apellido_cliente = next.apellido_empleado;
-      if (!next.telefono_cliente && next.telefono_empleado) next.telefono_cliente = next.telefono_empleado;
-      if (!next.numero_documento_cliente && next.numero_documento) next.numero_documento_cliente = next.numero_documento.toString();
-    }
-
-    return next;
-  };
 
   useEffect(() => {
     cargarDatos();
@@ -85,7 +54,10 @@ function UsuariosManagement() {
     const { name, value, type, checked } = e.target;
     
     if (type === "radio" && name === "rol") {
-      setFormDataUsuario(prev => applyRoleChange(prev, value));
+      setFormDataUsuario(prev => ({
+        ...prev,
+        roles: checked ? [value] : []
+      }));
     } else if (type === "checkbox") {
       setFormDataUsuario(prev => ({
         ...prev,
@@ -101,148 +73,67 @@ function UsuariosManagement() {
 
   const handleSubmitUsuario = async (e) => {
     e.preventDefault();
-    
-    // Validaciones básicas
-    if (!formDataUsuario.correo || !formDataUsuario.roles.length) {
-      alert("Por favor completa los campos obligatorios");
-      return;
-    }
-    
-    // Validaciones específicas por rol
-    const rolActual = formDataUsuario.roles[0];
-    if (rolActual === "Cliente" && (!formDataUsuario.nombre_cliente || !formDataUsuario.apellido_cliente)) {
-      alert("Por favor completa el nombre y apellido del cliente");
-      return;
-    }
-    if (rolActual === "Empleado" && (!formDataUsuario.nombre_empleado || !formDataUsuario.apellido_empleado)) {
-      alert("Por favor completa el nombre y apellido del empleado");
-      return;
-    }
-    if (rolActual === "Empleado" && !formDataUsuario.numero_documento) {
-      alert("Por favor completa el número de documento del empleado");
-      return;
-    }
-    if (rolActual === "Administrador" && !formDataUsuario.nombre_usuario) {
-      alert("Por favor completa el nombre de usuario para administradores");
-      return;
-    }
-    
     try {
-      // Generar nombre de usuario automáticamente según el rol
-      let nombreUsuarioFinal = "";
-      if (rolActual === "Administrador") {
-        nombreUsuarioFinal = formDataUsuario.nombre_usuario;
-      } else if (rolActual === "Empleado") {
-        nombreUsuarioFinal = `${formDataUsuario.nombre_empleado.toLowerCase().replace(/\s/g, '')}.${formDataUsuario.apellido_empleado.toLowerCase().replace(/\s/g, '')}`;
-      } else if (rolActual === "Cliente") {
-        nombreUsuarioFinal = `${formDataUsuario.nombre_cliente.toLowerCase().replace(/\s/g, '')}.${formDataUsuario.apellido_cliente.toLowerCase().replace(/\s/g, '')}`;
-      }
-      
-      // Datos básicos del usuario (siempre se guardan en tabla usuarios)
-      const usuarioData = {
-        correo: formDataUsuario.correo,
-        contraseña: formDataUsuario.contraseña,
-        roles: formDataUsuario.roles,
-        estado: formDataUsuario.estado,
-        nombre_usuario: nombreUsuarioFinal,
-        numero_documento: parseInt(formDataUsuario.numero_documento) || Math.floor(Date.now() / 1000)
-      };
-      
-      // Crear usuario en tabla usuarios
-      let usuarioCreado;
       if (editingUsuario) {
+        const usuarioData = {
+          correo: formDataUsuario.correo,
+          roles: formDataUsuario.roles,
+          estado: formDataUsuario.estado,
+          numero_identificacion: formDataUsuario.numero_identificacion
+        };
+        
+        // Agregar nombre_usuario solo para administradores
+        if (formDataUsuario.roles.includes("Administrador")) {
+          usuarioData.nombre_usuario = formDataUsuario.nombre_usuario;
+        }
+        
+        // Agregar campos específicos según el rol
+        if (formDataUsuario.roles.includes("Cliente")) {
+          usuarioData.nombre_cliente = formDataUsuario.nombre_cliente;
+          usuarioData.apellido_cliente = formDataUsuario.apellido_cliente;
+          usuarioData.telefono_cliente = formDataUsuario.telefono_cliente;
+          usuarioData.tipo_documento_cliente = formDataUsuario.tipo_documento_cliente;
+          usuarioData.numero_documento_cliente = formDataUsuario.numero_documento_cliente;
+        }
+
         if (formDataUsuario.contraseña) {
           usuarioData.contraseña = formDataUsuario.contraseña;
         }
+
         await actualizarUsuario(editingUsuario.id_usuario, usuarioData);
-        usuarioCreado = editingUsuario;
       } else {
-        usuarioCreado = await crearUsuario(usuarioData);
-      }
-      
-      // Guardar datos adicionales según rol
-      if (rolActual === "Cliente") {
-        const clienteData = {
-          nombre: formDataUsuario.nombre_cliente,
-          apellido: formDataUsuario.apellido_cliente,
+        // Generar nombre de usuario automáticamente o usar el proporcionado
+        let nombreUsuarioFinal = "";
+        if (formDataUsuario.roles.includes("Administrador")) {
+          // Para administradores, usar el nombre de usuario proporcionado
+          nombreUsuarioFinal = formDataUsuario.nombre_usuario;
+        } else if (formDataUsuario.roles.includes("Cliente")) {
+          // Para clientes, generar automáticamente
+          nombreUsuarioFinal = `${formDataUsuario.nombre_cliente.toLowerCase().replace(/\s/g, '')}.${formDataUsuario.apellido_cliente.toLowerCase().replace(/\s/g, '')}`;
+        } else {
+          // Para otros roles, generar con timestamp
+          nombreUsuarioFinal = `user${Date.now()}`;
+        }
+        
+        const usuarioData = {
+          nombre_usuario: nombreUsuarioFinal,
           correo: formDataUsuario.correo,
-          telefono: formDataUsuario.telefono_cliente,
-          tipo_documento: formDataUsuario.tipo_documento_cliente,
-          numero_documento: formDataUsuario.numero_documento_cliente
+          contraseña: formDataUsuario.contraseña,
+          roles: formDataUsuario.roles,
+          estado: formDataUsuario.estado,
+          numero_identificacion: formDataUsuario.numero_identificacion
         };
-
-        let clienteExistente = null;
-        try {
-          if (clienteData.correo) {
-            clienteExistente = await getClientePorCorreo(clienteData.correo);
-          }
-        } catch {
-          clienteExistente = null;
+        
+        // Agregar campos específicos según el rol
+        if (formDataUsuario.roles.includes("Cliente")) {
+          usuarioData.nombre_cliente = formDataUsuario.nombre_cliente;
+          usuarioData.apellido_cliente = formDataUsuario.apellido_cliente;
+          usuarioData.telefono_cliente = formDataUsuario.telefono_cliente;
+          usuarioData.tipo_documento_cliente = formDataUsuario.tipo_documento_cliente;
+          usuarioData.numero_documento_cliente = formDataUsuario.numero_documento_cliente;
         }
 
-        if (clienteExistente?.id_cliente) {
-          await actualizarCliente(clienteExistente.id_cliente, { ...clienteData, estado: true });
-        } else {
-          await crearCliente(clienteData);
-        }
-      } else if (rolActual === "Empleado") {
-        const empleadoData = {
-          nombre: formDataUsuario.nombre_empleado,
-          apellido: formDataUsuario.apellido_empleado,
-          documento: formDataUsuario.numero_documento.toString(),
-          cargo: formDataUsuario.cargo_empleado,
-          email: formDataUsuario.correo,
-          telefono: formDataUsuario.telefono_empleado
-        };
-        console.log("Datos de empleado a enviar:", empleadoData);
-
-        let empExistente = null;
-        try {
-          const empleados = await getEmpleados();
-          empExistente = Array.isArray(empleados)
-            ? empleados.find(em => (em.email || "").toLowerCase() === (empleadoData.email || "").toLowerCase())
-            : null;
-        } catch {
-          empExistente = null;
-        }
-
-        if (empExistente?.id_empleado) {
-          await actualizarEmpleado(empExistente.id_empleado, empleadoData);
-        } else {
-          await crearEmpleado(empleadoData);
-        }
-      }
-
-      // Si se está editando y cambió el rol, desactivar/eliminar el registro anterior
-      if (editingUsuario) {
-        const original = Array.isArray(originalRoles) ? originalRoles : [];
-
-        const estabaEnClientes = original.includes("Cliente") && rolActual !== "Cliente";
-        if (estabaEnClientes && formDataUsuario.correo) {
-          try {
-            const cliente = await getClientePorCorreo(formDataUsuario.correo);
-            if (cliente?.id_cliente) {
-              await actualizarCliente(cliente.id_cliente, { estado: false });
-            }
-          } catch (e) {
-            console.error("No se pudo desactivar el cliente anterior:", e);
-          }
-        }
-
-        const estabaEnEmpleados = original.includes("Empleado") && rolActual !== "Empleado";
-        if (estabaEnEmpleados && formDataUsuario.correo) {
-          try {
-            const empleados = await getEmpleados();
-            const emp = Array.isArray(empleados)
-              ? empleados.find(em => (em.email || "").toLowerCase() === formDataUsuario.correo.toLowerCase())
-              : null;
-            if (emp?.id_empleado) {
-              await eliminarEmpleado(emp.id_empleado);
-            }
-          } catch (e) {
-            console.error("No se pudo eliminar el empleado anterior:", e);
-          }
-        }
+        await crearUsuario(usuarioData);
       }
       
       await cargarDatos();
@@ -251,71 +142,28 @@ function UsuariosManagement() {
       alert(editingUsuario ? "Usuario actualizado exitosamente" : "Usuario creado exitosamente");
     } catch (error) {
       console.error("Error guardando usuario:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Intenta nuevamente";
-      alert(`Error al guardar el usuario: ${errorMessage}`);
+      alert("Error al guardar el usuario: " + (error.response?.data?.message || "Intenta nuevamente"));
     }
   };
 
-  const handleEditUsuario = async (usuario) => {
+  const handleEditUsuario = (usuario) => {
     console.log("Editando usuario:", usuario);
     setEditingUsuario(usuario);
-    const baseForm = {
+    setFormDataUsuario({
       correo: usuario.correo,
       contraseña: "",
       roles: usuario.roles ? usuario.roles.map(rol => rol.nombre) : [],
       estado: usuario.estado,
-      numero_documento: usuario.numero_documento || "",
+      numero_identificacion: usuario.numero_identificacion || "",
       nombre_usuario: usuario.nombre_usuario || "",
       // Campos adicionales para clientes (si existen)
       nombre_cliente: usuario.nombre_cliente || "",
       apellido_cliente: usuario.apellido_cliente || "",
       telefono_cliente: usuario.telefono_cliente || "",
       tipo_documento_cliente: usuario.tipo_documento_cliente || "CC",
-      numero_documento_cliente: usuario.numero_documento_cliente || "",
-      // Campos adicionales para empleados (si existen)
-      nombre_empleado: usuario.nombre_empleado || "",
-      apellido_empleado: usuario.apellido_empleado || "",
-      cargo_empleado: usuario.cargo_empleado || "",
-      telefono_empleado: usuario.telefono_empleado || ""
-    };
-    setFormDataUsuario(baseForm);
-    setOriginalRoles(baseForm.roles);
+      numero_documento_cliente: usuario.numero_documento_cliente || ""
+    });
     setShowModalUsuario(true);
-
-    const rolesActuales = baseForm.roles;
-    try {
-      if (rolesActuales.includes("Cliente") && baseForm.correo) {
-        const cliente = await getClientePorCorreo(baseForm.correo);
-        setFormDataUsuario(prev => ({
-          ...prev,
-          nombre_cliente: cliente?.nombre ?? prev.nombre_cliente,
-          apellido_cliente: cliente?.apellido ?? prev.apellido_cliente,
-          telefono_cliente: cliente?.telefono ?? prev.telefono_cliente,
-          tipo_documento_cliente: cliente?.tipo_documento ?? prev.tipo_documento_cliente,
-          numero_documento_cliente: cliente?.numero_documento ?? prev.numero_documento_cliente,
-          numero_documento: prev.numero_documento || cliente?.numero_documento || prev.numero_documento
-        }));
-      }
-
-      if (rolesActuales.includes("Empleado") && baseForm.correo) {
-        const empleados = await getEmpleados();
-        const emp = Array.isArray(empleados)
-          ? empleados.find(e => (e.email || "").toLowerCase() === baseForm.correo.toLowerCase())
-          : null;
-        if (emp) {
-          setFormDataUsuario(prev => ({
-            ...prev,
-            nombre_empleado: emp.nombre ?? prev.nombre_empleado,
-            apellido_empleado: emp.apellido ?? prev.apellido_empleado,
-            telefono_empleado: emp.telefono ?? prev.telefono_empleado,
-            cargo_empleado: emp.cargo ?? prev.cargo_empleado,
-            numero_documento: prev.numero_documento || emp.documento || prev.numero_documento
-          }));
-        }
-      }
-    } catch (e) {
-      console.error("Error cargando datos específicos por rol:", e);
-    }
   };
 
   const handleDeleteUsuario = async (id) => {
@@ -354,22 +202,16 @@ function UsuariosManagement() {
       contraseña: "",
       roles: [],
       estado: true,
-      numero_documento: "",
+      numero_identificacion: "",
       nombre_usuario: "",
       // Campos adicionales para clientes
       nombre_cliente: "",
       apellido_cliente: "",
       telefono_cliente: "",
       tipo_documento_cliente: "CC",
-      numero_documento_cliente: "",
-      // Campos adicionales para empleados
-      nombre_empleado: "",
-      apellido_empleado: "",
-      cargo_empleado: "",
-      telefono_empleado: ""
+      numero_documento_cliente: ""
     });
     setEditingUsuario(null);
-    setOriginalRoles([]);
   };
 
   const closeModal = () => {
@@ -470,13 +312,13 @@ function UsuariosManagement() {
                     usuario.correo.toLowerCase().includes(searchUsuario.toLowerCase()) ||
                     usuario.roles.some(rol => rol.nombre.toLowerCase().includes(searchUsuario.toLowerCase()))
                   ).map((usuario) => (
-                    <tr key={usuario.id_usuario}>
+                    <tr key={usuario.id_usuario} className={!usuario.estado ? "table-secondary" : ""}>
                       <td>{usuario.id_usuario}</td>
                       <td>
                         <strong>{usuario.nombre_usuario}</strong>
                       </td>
                       <td>{usuario.correo}</td>
-                      <td>{usuario.numero_documento ?? '-'}</td>
+                      <td>{usuario.numero_documento || '-'}</td>
                       <td>
                         <div className="d-flex align-items-center">
                           <span className={`badge me-2 d-flex align-items-center`} style={{
@@ -604,7 +446,10 @@ function UsuariosManagement() {
                                 borderRadius: '8px'
                               }}
                               onClick={() => {
-                                setFormDataUsuario(prev => applyRoleChange(prev, rolValue));
+                                setFormDataUsuario(prev => ({
+                                  ...prev,
+                                  roles: [rolValue]
+                                }));
                               }}
                             >
                               <div className="card-body text-center p-4">
@@ -649,7 +494,7 @@ function UsuariosManagement() {
                     <div className="border-top pt-4" style={{ borderColor: "#e9ecef" }}>
                       {/* Campos para Administrador */}
                       {formDataUsuario.roles.includes("Administrador") && (
-                        <div className="mb-5 p-4 rounded" style={{ backgroundColor: "#faf8f6" }}>
+                        <div className="mb-5 p-4 rounded" style={{ backgroundColor: "#f8f9ff" }}>
                           <div className="d-flex align-items-center mb-4">
                             <div className="rounded-circle p-3 me-3" style={{ backgroundColor: "#8b6f47" }}>
                               <i className="bi bi-shield-check text-white fs-4"></i>
@@ -680,24 +525,6 @@ function UsuariosManagement() {
                             </div>
                             <div className="col-md-6">
                               <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
-                                <i className="bi bi-card-text me-1"></i>
-                                Número de Documento <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                className="form-control form-control-lg border-2"
-                                name="numero_documento"
-                                value={formDataUsuario.numero_documento}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="Ej: 123456789"
-                                style={{ borderColor: "#8b6f47" }}
-                              />
-                            </div>
-                          </div>
-                          <div className="row g-4">
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
                                 <i className="bi bi-envelope me-1"></i>
                                 Correo Electrónico <span className="text-danger">*</span>
                               </label>
@@ -712,6 +539,8 @@ function UsuariosManagement() {
                                 style={{ borderColor: "#8b6f47" }}
                               />
                             </div>
+                          </div>
+                          <div className="row g-4">
                             <div className="col-md-6">
                               <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
                                 <i className="bi bi-lock me-1"></i>
@@ -727,8 +556,6 @@ function UsuariosManagement() {
                                 placeholder={editingUsuario ? "Dejar en blanco para mantener" : "Mínimo 6 caracteres"}
                               />
                             </div>
-                          </div>
-                          <div className="row g-4">
                             <div className="col-md-6">
                               <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
                                 <i className="bi bi-toggle-on me-1"></i>
@@ -892,83 +719,18 @@ function UsuariosManagement() {
                             </div>
                             <div>
                               <h5 className="mb-1 fw-bold" style={{ color: "#a67c52" }}>
-                                Datos del Empleado
+                                Acceso del Empleado
                               </h5>
-                              <small style={{ color: "#6c757d" }}>Información del personal del hotel</small>
+                              <small style={{ color: "#6c757d" }}>
+                                Solo las credenciales de acceso al sistema. Los datos de personal (nombre, cargo, documento) se gestionan en la pestaña "Empleados del Hotel".
+                              </small>
                             </div>
                           </div>
                           <div className="row g-4">
                             <div className="col-md-6">
                               <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-person me-1"></i>
-                                Nombre <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control form-control-lg border-2"
-                                name="nombre_empleado"
-                                value={formDataUsuario.nombre_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="Nombre completo"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-person me-1"></i>
-                                Apellido <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control form-control-lg border-2"
-                                name="apellido_empleado"
-                                value={formDataUsuario.apellido_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="Apellido completo"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                          </div>
-                          <div className="row g-4">
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-card-text me-1"></i>
-                                Documento <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                className="form-control form-control-lg border-2"
-                                name="numero_documento"
-                                value={formDataUsuario.numero_documento}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="123456789"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-briefcase me-1"></i>
-                                Cargo <span className="text-danger">*</span>
-                              </label>
-                              <select
-                                className="form-select form-select-lg border-2"
-                                name="cargo_empleado"
-                                value={formDataUsuario.cargo_empleado}
-                                onChange={handleInputChange}
-                                required
-                                style={{ borderColor: "#a67c52" }}
-                              >
-                                <option value="">Selecciona un cargo</option>
-                                <option value="Recepcionista">Recepcionista</option>
-                                <option value="Aseador">Aseador</option>
-                              </select>
-                            </div>
-                            <div className="col-md-12">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-envelope me-1"></i>{" "}Correo Electrónico <span className="text-danger">*</span>
+                                <i className="bi bi-envelope me-1"></i>
+                                Correo Electrónico <span className="text-danger">*</span>
                               </label>
                               <input
                                 type="email"
@@ -978,24 +740,6 @@ function UsuariosManagement() {
                                 onChange={handleInputChange}
                                 required
                                 placeholder="empleado@ejemplo.com"
-                                style={{ borderColor: "#a67c52" }}
-                              />
-                            </div>
-                          </div>
-                          <div className="row g-4">
-                            <div className="col-md-6">
-                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                                <i className="bi bi-telephone me-1"></i>
-                                Teléfono <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="tel"
-                                className="form-control form-control-lg border-2"
-                                name="telefono_empleado"
-                                value={formDataUsuario.telefono_empleado}
-                                onChange={handleInputChange}
-                                required
-                                placeholder="3001234567"
                                 style={{ borderColor: "#a67c52" }}
                               />
                             </div>

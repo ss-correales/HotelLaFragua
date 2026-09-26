@@ -69,3 +69,24 @@ def verify_token(
             detail="Token inválido o expirado",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def require_admin(payload: dict = Depends(verify_token)):
+    """
+    Exige que el usuario autenticado tenga el rol Administrador.
+    Se usa igual que verify_token, pero además valida el rol:
+
+        @router.post("/roles")
+        def crear_rol(..., current_user = Depends(require_admin)):
+            ...
+    """
+    if not _is_auth_enabled():
+        return payload
+
+    roles = payload.get("roles", [])
+    if "Administrador" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requiere rol de Administrador",
+        )
+    return payload

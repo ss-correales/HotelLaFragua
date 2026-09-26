@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AUTH_API_BASE_URL } from "../../services/config.js";
 import { getClientePorCorreo } from "../../services/clientesApi";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,10 +10,16 @@ function Login() {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  // Si llegamos aquí desde un botón "Reservar", continuamos a esa página tras el login
+  const redirectTo = location.state?.redirectTo;
+  const tipoHabitacion = location.state?.tipo_habitacion;
 
   const iniciarSesion = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
     try {
@@ -23,9 +29,9 @@ function Login() {
       });
 
       const token = response.data.access_token;
-      
+
       if (!token) {
-        alert("Error en el login. Intenta nuevamente.");
+        setError("El correo y/o la contraseña son incorrectos, por favor inténtelo de nuevo.");
         return;
       }
 
@@ -51,12 +57,16 @@ function Login() {
         // Continuar aunque no se obtengan los datos del cliente
       }
       
-      alert("¡Sesión iniciada correctamente!");
-      navigate("/perfil");
+      // Si veníamos de "Reservar", continuamos allí con el tipo preseleccionado
+      if (redirectTo) {
+        navigate(redirectTo, { state: { tipo_habitacion: tipoHabitacion } });
+      } else {
+        navigate("/perfil");
+      }
 
-    } catch (error) {
-      console.error("Error en login:", error);
-      alert(error.response?.data?.message || "Credenciales incorrectas");
+    } catch (err) {
+      console.error("Error en login:", err);
+      setError("El correo y/o la contraseña son incorrectos, por favor inténtelo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -120,9 +130,13 @@ function Login() {
                   </div>
                 </div>
 
+                {error && (
+                  <p className="text-danger text-center small mb-3">{error}</p>
+                )}
+
                 {/* BOTÓN */}
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn btn-primary w-100 py-2 mb-3"
                   disabled={loading}
                 >

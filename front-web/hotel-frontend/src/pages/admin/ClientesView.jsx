@@ -258,15 +258,9 @@ function ClientesView() {
                         </div>
                       </td>
                       <td>
-                        {cliente.fecha_registro
-                          ? new Date(cliente.fecha_registro).toLocaleString('es-CO', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : "-"}
+                        <span className="text-muted">
+                          {cliente.fecha_registro ? new Date(cliente.fecha_registro).toLocaleDateString() : '-'}
+                        </span>
                       </td>
                       <td>
                         <div className="btn-group" role="group">

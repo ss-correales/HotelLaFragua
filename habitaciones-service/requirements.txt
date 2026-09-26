@@ -20,3 +20,4 @@ pymysql
 cryptography
 uvicorn[standard]
 python-jose[cryptography]
+apscheduler

@@ -1,17 +1,7 @@
-import axios from "axios";
+import { createApi } from "./api.js";
 import { CLIENTES_SERVICE_URL } from "./config.js";
 
-const clientesApi = axios.create({
-  baseURL: CLIENTES_SERVICE_URL,
-});
-
-clientesApi.interceptors.request.use(config => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+const clientesApi = createApi(CLIENTES_SERVICE_URL);
 
 // Clientes
 export const getClientes = async () => {

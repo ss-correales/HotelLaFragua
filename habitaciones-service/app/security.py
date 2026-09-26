@@ -60,10 +60,24 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
                 detail="Token inválido",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return user_identity
+        return payload
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def require_admin(payload = Depends(verify_token)):
+    """Exige que el usuario autenticado tenga el rol Administrador."""
+    if not _is_auth_enabled():
+        return payload
+
+    roles = payload.get("roles", []) if isinstance(payload, dict) else []
+    if "Administrador" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requiere rol de Administrador",
+        )
+    return payload

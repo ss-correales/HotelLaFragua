@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getHabitaciones } from "../../services/habitacionesApi";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../../assets/css/hotel-styles.css";
 
 function HabitacionesView() {
+  const navigate = useNavigate();
   const [habitaciones, setHabitaciones] = useState([]);
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState(null);
+
+  // Ir a reservar: exige iniciar sesión y preselecciona el tipo de habitación
+  const handleReservar = (hab) => {
+    const tipo = hab?.tipo_habitacion;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // No ha iniciado sesión -> lo mandamos a login y luego continúa a reservas
+      navigate("/login", {
+        state: { redirectTo: "/reservas", tipo_habitacion: tipo },
+      });
+      return;
+    }
+    // Ya autenticado -> va a reservas con el tipo ya elegido
+    navigate("/reservas", { state: { tipo_habitacion: tipo } });
+  };
   const [filtro, setFiltro] = useState({
     tipo: "",
     personas: "",
@@ -331,9 +348,9 @@ function HabitacionesView() {
 
                     {/* Botones de acción */}
                     <div className="d-grid gap-2 d-md-flex">
-                      <button 
+                      <button
                         className="btn btn-primary btn-lg flex-fill"
-                        onClick={() => setHabitacionSeleccionada(item.habitacion)}
+                        onClick={() => handleReservar(item.habitacion)}
                         disabled={!item.disponible}
                       >
                         <i className="bi bi-calendar-check me-2"></i>
@@ -392,9 +409,9 @@ function HabitacionesView() {
 
                     {/* Botones de acción */}
                     <div className="d-grid gap-2 d-md-flex">
-                      <button 
+                      <button
                         className="btn btn-primary btn-lg flex-fill"
-                        onClick={() => setHabitacionSeleccionada(item.habitacion)}
+                        onClick={() => handleReservar(item.habitacion)}
                         disabled={!item.disponible}
                       >
                         <i className="bi bi-calendar-check me-2"></i>
@@ -579,9 +596,10 @@ function HabitacionesView() {
                 >
                   Cerrar
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary btn-lg"
+                  onClick={() => handleReservar(habitacionSeleccionada)}
                   disabled={habitacionSeleccionada.estado !== "Libre"}
                 >
                   <i className="bi bi-calendar-check me-2"></i>

@@ -50,6 +50,10 @@ function NavbarAdmin() {
           <i className="bi bi-calendar-check me-1"></i>
           Reservas
         </li>
+        <li onClick={() => navigate("/admin/facturas")}>
+          <i className="bi bi-receipt me-1"></i>
+          Facturas
+        </li>
         <li onClick={() => navigate("/admin/reportes")}>
           <i className="bi bi-graph-up me-1"></i>
           Reportes

@@ -17,6 +17,7 @@ def crear_usuario(db: Session, usuario_data):
     nuevo_usuario = Usuario(
         nombre_usuario=usuario_data.nombre_usuario,
         correo=usuario_data.correo,
+        numero_documento=usuario_data.numero_documento,
         contraseña_hash=hash_password(usuario_data.contraseña),
         estado=True
     )
