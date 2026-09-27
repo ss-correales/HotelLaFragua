@@ -97,13 +97,17 @@ def iniciar_checkout_wompi(db: Session, id_reserva: int):
     )
     db.add(pago)
     db.commit()
+    # Wompi exige HTTPS en redirect-url. http://localhost causa 403 / "URL invalida".
+    redirect_url = (WOMPI_REDIRECT_URL or "").strip()
+    if not redirect_url.startswith("https://"):
+        redirect_url = ""
     return {
         "public_key": WOMPI_PUBLIC_KEY,
         "currency": "COP",
         "amount_in_cents": amount_in_cents,
         "reference": reference,
         "integrity_signature": integrity,
-        "redirect_url": WOMPI_REDIRECT_URL,
+        "redirect_url": redirect_url or None,
     }
 
 

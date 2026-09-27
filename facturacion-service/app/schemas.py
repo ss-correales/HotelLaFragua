@@ -30,7 +30,7 @@ class WompiCheckoutResponse(BaseModel):
     amount_in_cents: int
     reference: str
     integrity_signature: str
-    redirect_url: str
+    redirect_url: str | None = None
 
 
 class FacturaBase(BaseModel):
