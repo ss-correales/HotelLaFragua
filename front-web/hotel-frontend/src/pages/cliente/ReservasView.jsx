@@ -211,9 +211,13 @@ function ReservasView() {
         "amount-in-cents": checkout.amount_in_cents,
         reference: checkout.reference,
         "signature:integrity": checkout.integrity_signature,
-        "redirect-url": checkout.redirect_url,
       };
+      // Wompi rechaza http://localhost en redirect-url (CloudFront 403).
+      if (checkout.redirect_url) {
+        fields["redirect-url"] = checkout.redirect_url;
+      }
       Object.entries(fields).forEach(([name, value]) => {
+        if (value === undefined || value === null || value === "") return;
         const input = document.createElement("input");
         input.type = "hidden";
         input.name = name;
@@ -276,22 +280,41 @@ function ReservasView() {
             <p className="lead mb-4">
               Completa el pago con Wompi para confirmar tu reserva.
             </p>
-            <div className="d-flex gap-3 justify-content-center">
-              <button className="btn btn-success btn-lg" onClick={handlePagarConWompi} disabled={paymentLoading}>
+            <div className="d-flex flex-column align-items-center gap-3">
+              <button
+                type="button"
+                className="btn btn-lg px-5"
+                onClick={handlePagarConWompi}
+                disabled={paymentLoading}
+                style={{
+                  backgroundColor: "#A67C52",
+                  borderColor: "#A67C52",
+                  color: "#fff",
+                  fontWeight: 700,
+                  minWidth: "260px",
+                }}
+              >
                 <i className="bi bi-credit-card me-2"></i>
                 {paymentLoading ? "Preparando pago..." : "Pagar con Wompi"}
               </button>
-              <button
-                className="btn btn-primary btn-lg"
-                onClick={() => setReservaSuccess(false)}
-              >
-                <i className="bi bi-calendar-plus me-2"></i>
-                Hacer otra reserva
-              </button>
-              <button className="btn btn-outline-light btn-lg" onClick={() => navigate("/mis-reservas")}>
-                <i className="bi bi-suitcase me-2"></i>
-                Ver mis reservas
-              </button>
+              <div className="d-flex flex-wrap gap-2 justify-content-center">
+                <button
+                  type="button"
+                  className="btn btn-outline-light"
+                  onClick={() => setReservaSuccess(false)}
+                >
+                  <i className="bi bi-calendar-plus me-2"></i>
+                  Hacer otra reserva
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-light"
+                  onClick={() => navigate("/mis-reservas")}
+                >
+                  <i className="bi bi-suitcase me-2"></i>
+                  Ver mis reservas
+                </button>
+              </div>
             </div>
           </div>
         </div>
