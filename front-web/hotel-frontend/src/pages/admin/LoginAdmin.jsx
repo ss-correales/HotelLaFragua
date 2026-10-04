@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { AUTH_API_BASE_URL } from "../../services/config.js";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
@@ -8,33 +9,65 @@ function LoginAdmin() {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const iniciarSesionAdmin = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8086/auth/login", {
+      const response = await axios.post(`${AUTH_API_BASE_URL}/login`, {
         correo,
         contraseña: password
       });
 
       const token = response.data.access_token;
-      
+
       if (!token) {
-        alert("Error en el login de administrador. Intenta nuevamente.");
+        setError("El correo y/o la contraseña son incorrectos, por favor inténtelo de nuevo.");
+        return;
+      }
+
+      // Decodificar el JWT para obtener información del usuario
+      let decodedPayload;
+      try {
+        const payload = token.split('.')[1];
+        decodedPayload = JSON.parse(atob(payload));
+      } catch {
+        setError("No se pudo verificar el rol del usuario. Contacta al administrador del sistema.");
+        return;
+      }
+
+      const user = {
+        id: decodedPayload.sub || decodedPayload.id,
+        correo: decodedPayload.correo || decodedPayload.email,
+        roles: decodedPayload.roles || []
+      };
+
+      const hasAdminRole = Array.isArray(user.roles) && user.roles.some((rol) => {
+        if (typeof rol === "string") return rol === "Administrador";
+        return rol?.nombre === "Administrador" || rol?.name === "Administrador";
+      });
+
+      if (!hasAdminRole) {
+        setError("Acceso denegado. Solo los administradores pueden acceder a este panel.");
         return;
       }
 
       localStorage.setItem("token", token);
-      
-      alert("¡Sesión de administrador iniciada correctamente!");
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Disparar evento personalizado para sincronizar AuthProvider
+      window.dispatchEvent(new CustomEvent('localStorageUpdated', {
+        detail: { token, user }
+      }));
+
       navigate("/admin");
 
-    } catch (error) {
-      console.error("Error en login de admin:", error);
-      alert(error.response?.data?.message || "Credenciales de administrador incorrectas");
+    } catch (err) {
+      setError("El correo y/o la contraseña son incorrectos, por favor inténtelo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -97,6 +130,10 @@ function LoginAdmin() {
                     />
                   </div>
                 </div>
+
+                {error && (
+                  <p className="text-danger text-center small mb-3">{error}</p>
+                )}
 
                 {/* Botón */}
                 <div className="d-grid">

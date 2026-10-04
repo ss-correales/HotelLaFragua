@@ -1,185 +1,57 @@
-import axios from "axios";
+import { createApi } from "./api.js";
+import { RESERVAS_SERVICE_URL } from "./config.js";
 
-// Configuración base para el API
-const api = axios.create({
-  baseURL: "http://localhost:8083",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Función para obtener el token
-const getToken = () => {
-  return localStorage.getItem("token");
-};
-
-// Configuración de headers con autenticación
-const getAuthHeaders = () => {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+const api = createApi(RESERVAS_SERVICE_URL);
 
 // Endpoints de Reservas
 export const getReservas = async () => {
-  try {
-    const response = await api.get("/reservas", {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo reservas:", error);
-    throw error;
-  }
+  const response = await api.get("/reservas");
+  return response.data;
 };
 
 export const getReservaById = async (id) => {
-  try {
-    const response = await api.get(`/reservas/${id}`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo reserva:", error);
-    throw error;
-  }
+  const response = await api.get(`/reservas/${id}`);
+  return response.data;
 };
 
 export const crearReserva = async (reserva) => {
-  try {
-    const response = await api.post("/reservas", reserva, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error creando reserva:", error);
-    throw error;
-  }
+  const response = await api.post("/reservas", reserva);
+  return response.data;
 };
 
-export const actualizarReserva = async (id, reserva) => {
-  try {
-    const response = await api.put(`/reservas/${id}`, reserva, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error actualizando reserva:", error);
-    throw error;
-  }
+export const iniciarPagoWompi = async (idReserva) => {
+  const response = await api.post(`/reservas/${idReserva}/pago/wompi/checkout`);
+  return response.data;
 };
 
-export const eliminarReserva = async (id) => {
-  try {
-    const response = await api.delete(`/reservas/${id}`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error eliminando reserva:", error);
-    throw error;
-  }
+export const getMisReservas = async () => {
+  const response = await api.get("/reservas/mias");
+  return response.data;
 };
 
-export const getReservasByCliente = async (idCliente) => {
-  try {
-    const response = await api.get(`/reservas/cliente/${idCliente}`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo reservas del cliente:", error);
-    throw error;
-  }
+export const getServiciosAdicionales = async () => {
+  const response = await api.get("/reservas/servicios-adicionales");
+  return response.data;
 };
 
-export const getReservasByHabitacion = async (idHabitacion) => {
-  try {
-    const response = await api.get(`/reservas/habitacion/${idHabitacion}`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo reservas de la habitación:", error);
-    throw error;
-  }
+export const checkinReserva = async (idReserva, numeroHabitacion, serviciosAdicionales) => {
+  const body = {};
+  if (numeroHabitacion) body.numero_habitacion = numeroHabitacion;
+  if (serviciosAdicionales && serviciosAdicionales.length > 0) body.servicios_adicionales = serviciosAdicionales;
+  const response = await api.post(`/reservas/${idReserva}/checkin`, body);
+  return response.data;
 };
 
-export const getReservasByEstado = async (estado) => {
-  try {
-    const response = await api.get(`/reservas/estado/${estado}`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo reservas por estado:", error);
-    throw error;
-  }
+export const checkoutReserva = async (idReserva, montoDanos) => {
+  const body = montoDanos > 0 ? { monto_danos: montoDanos } : {};
+  const response = await api.post(`/reservas/${idReserva}/checkout`, body);
+  return response.data;
 };
 
-// Obtener habitaciones disponibles para fechas específicas
-export const getHabitacionesDisponibles = async (fechaInicio, fechaFin) => {
-  try {
-    const response = await api.get(`/reservas/disponibles`, {
-      params: { fechaInicio, fechaFin },
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo habitaciones disponibles:", error);
-    throw error;
-  }
-};
-
-// Cambiar estado de reserva
-export const cambiarEstadoReserva = async (id, nuevoEstado) => {
-  try {
-    const response = await api.patch(`/reservas/${id}/estado`, { 
-      estado: nuevoEstado 
-    }, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error cambiando estado de reserva:", error);
-    throw error;
-  }
-};
-
-// Obtener estadísticas de reservas
-export const getEstadisticasReservas = async () => {
-  try {
-    const response = await api.get("/reservas/estadisticas", {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error obteniendo estadísticas de reservas:", error);
-    throw error;
-  }
-};
-
-// Realizar check-in de reserva
-export const checkInReserva = async (id) => {
-  try {
-    const response = await api.post(`/reservas/${id}/checkin`, {}, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error realizando check-in:", error);
-    throw error;
-  }
-};
-
-// Realizar check-out de reserva
-export const checkOutReserva = async (id) => {
-  try {
-    const response = await api.post(`/reservas/${id}/checkout`, {}, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error realizando check-out:", error);
-    throw error;
-  }
+// Consultar cuántas habitaciones de un tipo hay disponibles para un rango de fechas
+export const getDisponibilidad = async (tipoHabitacion, fechaInicio, fechaFin) => {
+  const response = await api.get(`/reservas/disponibles`, {
+    params: { tipo_habitacion: tipoHabitacion, fecha_inicio: fechaInicio, fecha_fin: fechaFin },
+  });
+  return response.data;
 };

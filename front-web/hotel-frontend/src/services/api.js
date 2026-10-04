@@ -1,8 +1,9 @@
 import axios from "axios";
+import { AUTH_SERVICE_URL } from "./config.js";
 
 // API genérica con autenticación automática
 const api = axios.create({
-  baseURL: "http://localhost:8086", // auth-service por defecto
+  baseURL: AUTH_SERVICE_URL,
 });
 
 api.interceptors.request.use(config => {

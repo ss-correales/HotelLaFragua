@@ -1,5 +1,6 @@
 from pydantic import BaseModel, validator
 from typing import Optional, Literal
+from datetime import datetime
 
 TipoDocumento = Literal["CC", "CE", "PASAPORTE"]
 
@@ -33,6 +34,7 @@ class ClienteUpdate(BaseModel):
 
 class Cliente(ClienteBase):
     id_cliente: int
+    fecha_registro: Optional[datetime] = None
 
     class Config:
         from_attributes = True

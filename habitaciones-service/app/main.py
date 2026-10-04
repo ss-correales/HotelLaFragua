@@ -1,14 +1,20 @@
-import json
 import os
+import json
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from fastapi.security import HTTPBearer
+from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 from . import models
 from .database import engine
 from .routers import habitaciones
-from dotenv import load_dotenv
+from .crud import job_liberar_habitaciones_limpieza
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SERVICE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(SERVICE_DIR / ".env")
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -47,14 +53,19 @@ app.openapi_components = {
 
 # Aplicar seguridad global a todos los endpoints
 app.openapi_security = [{"BearerAuth": []}]
+cors_origins = get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_cors_origins(),
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(job_liberar_habitaciones_limpieza, "interval", minutes=1)
+scheduler.start()
 
 app.include_router(habitaciones.router)
 

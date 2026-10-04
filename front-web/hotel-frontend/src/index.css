@@ -90,3 +90,7 @@ input, select, textarea {
     color: #333;
   }
 }
+
+div[style*="background-color: rgb(212, 237, 218)"][style*="border: 1px solid rgb(195, 230, 203)"] {
+  display: none !important;
+}

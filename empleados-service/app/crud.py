@@ -12,7 +12,7 @@ def listar_empleados(db: Session):
     return db.query(Empleado).all()
 
 def obtener_empleado(db: Session, id: int):
-    return db.query(Empleado).filter(Empleado.id == id).first()
+    return db.query(Empleado).filter(Empleado.id_empleado == id).first()
 
 def actualizar_empleado(db: Session, id: int, empleado):
     emp = obtener_empleado(db, id)

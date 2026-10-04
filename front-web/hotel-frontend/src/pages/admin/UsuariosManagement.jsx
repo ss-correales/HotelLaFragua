@@ -17,12 +17,13 @@ function UsuariosManagement() {
   const [editingUsuario, setEditingUsuario] = useState(null);
   const [searchUsuario, setSearchUsuario] = useState("");
   const [formDataUsuario, setFormDataUsuario] = useState({
-    nombre_usuario: "",
     correo: "",
     numero_documento: "",
     contraseña: "",
     roles: [],
     estado: true,
+    numero_identificacion: "",
+    nombre_usuario: "",
     // Campos adicionales para clientes
     nombre_cliente: "",
     apellido_cliente: "",
@@ -76,28 +77,65 @@ function UsuariosManagement() {
     try {
       if (editingUsuario) {
         const usuarioData = {
-          nombre_usuario: formDataUsuario.nombre_usuario,
           correo: formDataUsuario.correo,
           numero_documento: Number(formDataUsuario.numero_documento),
           roles: formDataUsuario.roles,
-          estado: formDataUsuario.estado
+          estado: formDataUsuario.estado,
+          numero_identificacion: formDataUsuario.numero_identificacion
         };
         
+        // Agregar nombre_usuario solo para administradores
+        if (formDataUsuario.roles.includes("Administrador")) {
+          usuarioData.nombre_usuario = formDataUsuario.nombre_usuario;
+        }
+        
+        // Agregar campos específicos según el rol
+        if (formDataUsuario.roles.includes("Cliente")) {
+          usuarioData.nombre_cliente = formDataUsuario.nombre_cliente;
+          usuarioData.apellido_cliente = formDataUsuario.apellido_cliente;
+          usuarioData.telefono_cliente = formDataUsuario.telefono_cliente;
+          usuarioData.tipo_documento_cliente = formDataUsuario.tipo_documento_cliente;
+          usuarioData.numero_documento_cliente = formDataUsuario.numero_documento_cliente;
+        }
+
         if (formDataUsuario.contraseña) {
           usuarioData.contraseña = formDataUsuario.contraseña;
         }
-        
+
         await actualizarUsuario(editingUsuario.id_usuario, usuarioData);
       } else {
+        // Generar nombre de usuario automáticamente o usar el proporcionado
+        let nombreUsuarioFinal = "";
+        if (formDataUsuario.roles.includes("Administrador")) {
+          // Para administradores, usar el nombre de usuario proporcionado
+          nombreUsuarioFinal = formDataUsuario.nombre_usuario;
+        } else if (formDataUsuario.roles.includes("Cliente")) {
+          // Para clientes, generar automáticamente
+          nombreUsuarioFinal = `${formDataUsuario.nombre_cliente.toLowerCase().replace(/\s/g, '')}.${formDataUsuario.apellido_cliente.toLowerCase().replace(/\s/g, '')}`;
+        } else {
+          // Para otros roles, generar con timestamp
+          nombreUsuarioFinal = `user${Date.now()}`;
+        }
+        
         const usuarioData = {
-          nombre_usuario: formDataUsuario.nombre_usuario,
+          nombre_usuario: nombreUsuarioFinal,
           correo: formDataUsuario.correo,
           numero_documento: Number(formDataUsuario.numero_documento),
           contraseña: formDataUsuario.contraseña,
           roles: formDataUsuario.roles,
-          estado: formDataUsuario.estado
+          estado: formDataUsuario.estado,
+          numero_identificacion: formDataUsuario.numero_identificacion
         };
         
+        // Agregar campos específicos según el rol
+        if (formDataUsuario.roles.includes("Cliente")) {
+          usuarioData.nombre_cliente = formDataUsuario.nombre_cliente;
+          usuarioData.apellido_cliente = formDataUsuario.apellido_cliente;
+          usuarioData.telefono_cliente = formDataUsuario.telefono_cliente;
+          usuarioData.tipo_documento_cliente = formDataUsuario.tipo_documento_cliente;
+          usuarioData.numero_documento_cliente = formDataUsuario.numero_documento_cliente;
+        }
+
         await crearUsuario(usuarioData);
       }
       
@@ -115,12 +153,13 @@ function UsuariosManagement() {
     console.log("Editando usuario:", usuario);
     setEditingUsuario(usuario);
     setFormDataUsuario({
-      nombre_usuario: usuario.nombre_usuario,
       correo: usuario.correo,
       numero_documento: usuario.numero_documento || "",
       contraseña: "",
       roles: usuario.roles ? usuario.roles.map(rol => rol.nombre) : [],
       estado: usuario.estado,
+      numero_identificacion: usuario.numero_identificacion || "",
+      nombre_usuario: usuario.nombre_usuario || "",
       // Campos adicionales para clientes (si existen)
       nombre_cliente: usuario.nombre_cliente || "",
       apellido_cliente: usuario.apellido_cliente || "",
@@ -163,12 +202,13 @@ function UsuariosManagement() {
 
   const resetForm = () => {
     setFormDataUsuario({
-      nombre_usuario: "",
       correo: "",
       numero_documento: "",
       contraseña: "",
       roles: [],
       estado: true,
+      numero_identificacion: "",
+      nombre_usuario: "",
       // Campos adicionales para clientes
       nombre_cliente: "",
       apellido_cliente: "",
@@ -263,6 +303,7 @@ function UsuariosManagement() {
                     <th>ID</th>
                     <th>Nombre de Usuario</th>
                     <th>Correo</th>
+                    <th>Número de Identificación</th>
                     <th>Estado</th>
                     <th>Roles</th>
                     <th>Fecha de Creación</th>
@@ -276,12 +317,13 @@ function UsuariosManagement() {
                     usuario.correo.toLowerCase().includes(searchUsuario.toLowerCase()) ||
                     usuario.roles.some(rol => rol.nombre.toLowerCase().includes(searchUsuario.toLowerCase()))
                   ).map((usuario) => (
-                    <tr key={usuario.id_usuario}>
+                    <tr key={usuario.id_usuario} className={!usuario.estado ? "table-secondary" : ""}>
                       <td>{usuario.id_usuario}</td>
                       <td>
                         <strong>{usuario.nombre_usuario}</strong>
                       </td>
                       <td>{usuario.correo}</td>
+                      <td>{usuario.numero_documento || '-'}</td>
                       <td>
                         <div className="d-flex align-items-center">
                           <span className={`badge me-2 d-flex align-items-center`} style={{
@@ -365,7 +407,7 @@ function UsuariosManagement() {
       {/* Modal */}
       {showModalUsuario && (
         <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -375,191 +417,372 @@ function UsuariosManagement() {
               </div>
               <form onSubmit={handleSubmitUsuario}>
                 <div className="modal-body">
-                  <div className="row g-4 mb-4">
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Nombre de Usuario</label>
-                      <input
-                        type="text"
-                        className="form-control form-control-lg"
-                        name="nombre_usuario"
-                        value={formDataUsuario.nombre_usuario}
-                        onChange={handleInputChange}
-                        required
-                        disabled={editingUsuario}
-                        placeholder="Ej: admin123"
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Correo Electrónico</label>
-                      <input
-                        type="email"
-                        className="form-control form-control-lg"
-                        name="correo"
-                        value={formDataUsuario.correo}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="correo@ejemplo.com"
-                      />
-                    </div>
-                  </div>
-                  <div className="row g-4 mb-4">
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Número de Documento</label>
-                      <input
-                        type="number"
-                        className="form-control form-control-lg"
-                        name="numero_documento"
-                        value={formDataUsuario.numero_documento}
-                        onChange={handleInputChange}
-                        required
-                        min="1"
-                        placeholder="123456789"
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Contraseña</label>
-                      <input
-                        type="password"
-                        className="form-control form-control-lg"
-                        name="contraseña"
-                        value={formDataUsuario.contraseña}
-                        onChange={handleInputChange}
-                        required={!editingUsuario}
-                        placeholder={editingUsuario ? "Dejar en blanco para mantener" : "Mínimo 6 caracteres"}
-                      />
-                    </div>
-                  </div>
-                  <div className="row g-4 mb-4">
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold text-primary">Estado</label>
-                      <select
-                        className="form-select form-select-lg"
-                        name="estado"
-                        value={formDataUsuario.estado}
-                        onChange={handleInputChange}
-                      >
-                        <option value={true}>Activo</option>
-                        <option value={false}>Inactivo</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mb-5">
-                    <label className="form-label fw-bold text-primary">Rol del Usuario</label>
-                    <div className="d-flex gap-4 p-4 bg-light rounded">
+                  {/* Selección de Rol - Primera sección */}
+                  <div className="text-center mb-5">
+                    <h4 className="mb-4 fw-bold" style={{ color: "#a67c52" }}>
+                      <i className="bi bi-person-badge me-2"></i>
+                      Selecciona el Rol del Usuario
+                    </h4>
+                    <div className="row g-4 justify-content-center">
                       {roles.map(rol => {
                         const rolValue = typeof rol === 'string' ? rol : rol.nombre;
+                        const isSelected = formDataUsuario.roles.includes(rolValue);
+                        
+                        // Definir colores según el rol (solo tonos de café del hotel)
+                        const roleColors = {
+                          'Administrador': { bg: '#8b6f47', border: '#8b6f47', text: '#8b6f47' },
+                          'Empleado': { bg: '#a67c52', border: '#a67c52', text: '#a67c52' },
+                          'Cliente': { bg: '#c4a57b', border: '#c4a57b', text: '#c4a57b' }
+                        };
+                        const colors = roleColors[rolValue] || { bg: '#6c757d', border: '#6c757d', text: '#6c757d' };
+                        
                         return (
-                          <div key={rolValue} className="form-check">
-                            <input
-                              className="form-check-input"
-                              type="radio"
-                              name="rol"
-                              id={`rol-${rolValue}`}
-                              value={rolValue}
-                              checked={formDataUsuario.roles.includes(rolValue)}
-                              onChange={handleInputChange}
-                            />
-                            <label className="form-check-label fw-semibold" htmlFor={`rol-${rolValue}`}>
-                              {rolValue}
-                            </label>
+                          <div key={rolValue} className="col-md-4 col-sm-6">
+                            <div 
+                              className={`card h-100 border-3 cursor-pointer transition-all ${
+                                isSelected 
+                                  ? 'shadow-lg' 
+                                  : 'hover:shadow'
+                              }`}
+                              style={{ 
+                                cursor: 'pointer',
+                                borderColor: isSelected ? colors.border : '#dee2e6',
+                                backgroundColor: isSelected ? 'white' : 'white',
+                                borderRadius: '8px'
+                              }}
+                              onClick={() => {
+                                setFormDataUsuario(prev => ({
+                                  ...prev,
+                                  roles: [rolValue]
+                                }));
+                              }}
+                            >
+                              <div className="card-body text-center p-4">
+                                <div className={`rounded-circle mx-auto mb-3 p-3 ${
+                                  isSelected ? '' : 'bg-light'
+                                }`} style={{ 
+                                  backgroundColor: isSelected ? colors.bg : '#f8f9fa'
+                                }}>
+                                  <i className={`bi ${
+                                    rolValue === 'Administrador' ? 'bi-shield-check' :
+                                    rolValue === 'Empleado' ? 'bi-briefcase' :
+                                    'bi-person'
+                                  } fs-1 ${isSelected ? 'text-white' : ''}`} style={{ 
+                                    color: isSelected ? 'white' : colors.text 
+                                  }}></i>
+                                </div>
+                                <h5 className={`card-title mb-3 fw-bold ${
+                                  isSelected ? '' : ''
+                                }`} style={{ 
+                                  color: isSelected ? colors.text : '#6c757d'
+                                }}>
+                                  {rolValue}
+                                </h5>
+                                <p className="mb-0" style={{ 
+                                  color: isSelected ? colors.text : '#6c757d',
+                                  fontSize: '0.9rem'
+                                }}>
+                                  {rolValue === 'Administrador' ? 'Acceso total al sistema' :
+                                   rolValue === 'Empleado' ? 'Personal del hotel' :
+                                   'Huéspedes del hotel'}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Campos adicionales para clientes */}
-                  {formDataUsuario.roles.includes("Cliente") && (
-                    <div className="border border-2 rounded p-5 mb-4" style={{ borderColor: "#a67c52", backgroundColor: "#faf8f6" }}>
-                      <div className="d-flex align-items-center mb-5">
-                        <div className="rounded-circle p-3 me-3" style={{ backgroundColor: "#a67c52" }}>
-                          <i className="bi bi-person-badge text-white fs-5"></i>
+                  {/* Campos específicos según el rol seleccionado */}
+                  {formDataUsuario.roles.length > 0 && (
+                    <div className="border-top pt-4" style={{ borderColor: "#e9ecef" }}>
+                      {/* Campos para Administrador */}
+                      {formDataUsuario.roles.includes("Administrador") && (
+                        <div className="mb-5 p-4 rounded" style={{ backgroundColor: "#f8f9ff" }}>
+                          <div className="d-flex align-items-center mb-4">
+                            <div className="rounded-circle p-3 me-3" style={{ backgroundColor: "#8b6f47" }}>
+                              <i className="bi bi-shield-check text-white fs-4"></i>
+                            </div>
+                            <div>
+                              <h5 className="mb-1 fw-bold" style={{ color: "#8b6f47" }}>
+                                Datos del Administrador
+                              </h5>
+                              <small style={{ color: "#6c757d" }}>Configura el acceso del administrador</small>
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
+                                <i className="bi bi-person me-1"></i>
+                                Nombre de Usuario <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control form-control-lg border-2"
+                                name="nombre_usuario"
+                                value={formDataUsuario.nombre_usuario}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="Ej: admin123"
+                                style={{ borderColor: "#8b6f47" }}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
+                                <i className="bi bi-envelope me-1"></i>
+                                Correo Electrónico <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                className="form-control form-control-lg border-2"
+                                name="correo"
+                                value={formDataUsuario.correo}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="admin@ejemplo.com"
+                                style={{ borderColor: "#8b6f47" }}
+                              />
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
+                                <i className="bi bi-lock me-1"></i>
+                                Contraseña
+                              </label>
+                              <input
+                                type="password"
+                                className="form-control form-control-lg"
+                                name="contraseña"
+                                value={formDataUsuario.contraseña}
+                                onChange={handleInputChange}
+                                required={!editingUsuario}
+                                placeholder={editingUsuario ? "Dejar en blanco para mantener" : "Mínimo 6 caracteres"}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#8b6f47" }}>
+                                <i className="bi bi-toggle-on me-1"></i>
+                                Estado
+                              </label>
+                              <select
+                                className="form-select form-select-lg"
+                                name="estado"
+                                value={formDataUsuario.estado}
+                                onChange={handleInputChange}
+                              >
+                                <option value={true}>Activo</option>
+                                <option value={false}>Inactivo</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h6 className="mb-1 fw-bold" style={{ color: "#a67c52" }}>
-                            Información del Cliente
-                          </h6>
-                          <small className="text-muted">* Campos obligatorios</small>
+                      )}
+
+                      {/* Campos para Cliente */}
+                      {formDataUsuario.roles.includes("Cliente") && (
+                        <div className="mb-5 p-4 rounded" style={{ backgroundColor: "#faf8f6" }}>
+                          <div className="d-flex align-items-center mb-4">
+                            <div className="rounded-circle p-3 me-3" style={{ backgroundColor: "#c4a57b" }}>
+                              <i className="bi bi-person-badge text-white fs-4"></i>
+                            </div>
+                            <div>
+                              <h5 className="mb-1 fw-bold" style={{ color: "#c4a57b" }}>
+                                Datos del Cliente
+                              </h5>
+                              <small style={{ color: "#6c757d" }}>Información personal del huésped</small>
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-person me-1"></i>
+                                Nombre <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control form-control-lg border-2"
+                                name="nombre_cliente"
+                                value={formDataUsuario.nombre_cliente}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="Nombre completo"
+                                style={{ borderColor: "#c4a57b" }}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-person me-1"></i>
+                                Apellido <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control form-control-lg border-2"
+                                name="apellido_cliente"
+                                value={formDataUsuario.apellido_cliente}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="Apellido completo"
+                                style={{ borderColor: "#c4a57b" }}
+                              />
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-telephone me-1"></i>
+                                Teléfono <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="tel"
+                                className="form-control form-control-lg border-2"
+                                name="telefono_cliente"
+                                value={formDataUsuario.telefono_cliente}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="3001234567"
+                                style={{ borderColor: "#c4a57b" }}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-envelope me-1"></i>
+                                Correo Electrónico <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                className="form-control form-control-lg border-2"
+                                name="correo"
+                                value={formDataUsuario.correo}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="cliente@ejemplo.com"
+                                style={{ borderColor: "#c4a57b" }}
+                              />
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-card-text me-1"></i>
+                                Número de Documento <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                className="form-control form-control-lg border-2"
+                                name="numero_documento_cliente"
+                                value={formDataUsuario.numero_documento_cliente}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="123456789"
+                                style={{ borderColor: "#c4a57b" }}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-lock me-1"></i>
+                                Contraseña
+                              </label>
+                              <input
+                                type="password"
+                                className="form-control form-control-lg"
+                                name="contraseña"
+                                value={formDataUsuario.contraseña}
+                                onChange={handleInputChange}
+                                required={!editingUsuario}
+                                placeholder={editingUsuario ? "Dejar en blanco para mantener" : "Mínimo 6 caracteres"}
+                              />
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-12">
+                              <label className="form-label fw-bold" style={{ color: "#c4a57b" }}>
+                                <i className="bi bi-toggle-on me-1"></i>
+                                Estado
+                              </label>
+                              <select
+                                className="form-select form-select-lg"
+                                name="estado"
+                                value={formDataUsuario.estado}
+                                onChange={handleInputChange}
+                              >
+                                <option value={true}>Activo</option>
+                                <option value={false}>Inactivo</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="row g-4 mb-4">
-                        <div className="col-md-6">
-                          <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                            Nombre <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control form-control-lg"
-                            name="nombre_cliente"
-                            value={formDataUsuario.nombre_cliente}
-                            onChange={handleInputChange}
-                            placeholder="Nombre completo"
-                            required={formDataUsuario.roles.includes("Cliente")}
-                          />
+                      )}
+
+                      {/* Campos para Empleado */}
+                      {formDataUsuario.roles.includes("Empleado") && (
+                        <div className="mb-5 p-4 rounded" style={{ backgroundColor: "#faf8f6" }}>
+                          <div className="d-flex align-items-center mb-4">
+                            <div className="rounded-circle p-3 me-3" style={{ backgroundColor: "#a67c52" }}>
+                              <i className="bi bi-briefcase text-white fs-4"></i>
+                            </div>
+                            <div>
+                              <h5 className="mb-1 fw-bold" style={{ color: "#a67c52" }}>
+                                Acceso del Empleado
+                              </h5>
+                              <small style={{ color: "#6c757d" }}>
+                                Solo las credenciales de acceso al sistema. Los datos de personal (nombre, cargo, documento) se gestionan en la pestaña "Empleados del Hotel".
+                              </small>
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
+                                <i className="bi bi-envelope me-1"></i>
+                                Correo Electrónico <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                className="form-control form-control-lg border-2"
+                                name="correo"
+                                value={formDataUsuario.correo}
+                                onChange={handleInputChange}
+                                required
+                                placeholder="empleado@ejemplo.com"
+                                style={{ borderColor: "#a67c52" }}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
+                                <i className="bi bi-lock me-1"></i>
+                                Contraseña
+                              </label>
+                              <input
+                                type="password"
+                                className="form-control form-control-lg"
+                                name="contraseña"
+                                value={formDataUsuario.contraseña}
+                                onChange={handleInputChange}
+                                required={!editingUsuario}
+                                placeholder={editingUsuario ? "Dejar en blanco para mantener" : "Mínimo 6 caracteres"}
+                              />
+                            </div>
+                          </div>
+                          <div className="row g-4">
+                            <div className="col-12">
+                              <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
+                                <i className="bi bi-toggle-on me-1"></i>
+                                Estado
+                              </label>
+                              <select
+                                className="form-select form-select-lg"
+                                name="estado"
+                                value={formDataUsuario.estado}
+                                onChange={handleInputChange}
+                              >
+                                <option value={true}>Activo</option>
+                                <option value={false}>Inactivo</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div className="col-md-6">
-                          <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                            Apellido <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control form-control-lg"
-                            name="apellido_cliente"
-                            value={formDataUsuario.apellido_cliente}
-                            onChange={handleInputChange}
-                            placeholder="Apellido completo"
-                            required={formDataUsuario.roles.includes("Cliente")}
-                          />
-                        </div>
-                      </div>
-                      <div className="row g-4 mb-4">
-                        <div className="col-md-6">
-                          <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                            Teléfono <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            className="form-control form-control-lg"
-                            name="telefono_cliente"
-                            value={formDataUsuario.telefono_cliente}
-                            onChange={handleInputChange}
-                            placeholder="3001234567"
-                            required={formDataUsuario.roles.includes("Cliente")}
-                          />
-                        </div>
-                        <div className="col-md-6">
-                          <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                            Tipo de Documento <span className="text-danger">*</span>
-                          </label>
-                          <select
-                            className="form-select form-select-lg"
-                            name="tipo_documento_cliente"
-                            value={formDataUsuario.tipo_documento_cliente}
-                            onChange={handleInputChange}
-                            required={formDataUsuario.roles.includes("Cliente")}
-                          >
-                            <option value="CC">Cédula de Ciudadanía</option>
-                            <option value="CE">Cédula de Extranjería</option>
-                            <option value="PASAPORTE">Pasaporte</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="row g-4">
-                        <div className="col-12">
-                          <label className="form-label fw-bold" style={{ color: "#a67c52" }}>
-                            Número de Documento <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control form-control-lg"
-                            name="numero_documento_cliente"
-                            value={formDataUsuario.numero_documento_cliente}
-                            onChange={handleInputChange}
-                            placeholder="123456789"
-                            required={formDataUsuario.roles.includes("Cliente")}
-                          />
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>

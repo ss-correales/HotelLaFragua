@@ -1,19 +1,35 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getHabitaciones } from "../../services/habitacionesApi";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../../assets/css/hotel-styles.css";
 
 function HabitacionesView() {
+  const navigate = useNavigate();
   const [habitaciones, setHabitaciones] = useState([]);
   const [habitacionSeleccionada, setHabitacionSeleccionada] = useState(null);
+
+  // Ir a reservar: exige iniciar sesión y preselecciona el tipo de habitación
+  const handleReservar = (hab) => {
+    const tipo = hab?.tipo_habitacion;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // No ha iniciado sesión -> lo mandamos a login y luego continúa a reservas
+      navigate("/login", {
+        state: { redirectTo: "/reservas", tipo_habitacion: tipo },
+      });
+      return;
+    }
+    // Ya autenticado -> va a reservas con el tipo ya elegido
+    navigate("/reservas", { state: { tipo_habitacion: tipo } });
+  };
   const [filtro, setFiltro] = useState({
     tipo: "",
     personas: "",
     precioMin: "",
     precioMax: ""
   });
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   useEffect(() => {
     cargarHabitaciones();
@@ -122,58 +138,6 @@ function HabitacionesView() {
 
   return (
     <div className="habitaciones-view-cliente">
-      {/* Barra de Navegación Flotante */}
-      <nav className="navbar navbar-expand-lg navbar-dark fixed-top" style={{
-        background: 'linear-gradient(135deg, rgba(166, 124, 82, 0.95) 0%, rgba(139, 99, 68, 0.95) 100%)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 2px 20px rgba(0,0,0,0.1)'
-      }}>
-        <div className="container">
-          <a className="navbar-brand fw-bold" href="/">
-            <i className="bi bi-building me-2"></i>
-            Hotel La Fragua
-          </a>
-          
-          <button 
-            className="navbar-toggler" 
-            type="button"
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          
-          <div className={`collapse navbar-collapse ${showMobileMenu ? 'show' : ''}`}>
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <a className="nav-link" href="/">
-                  <i className="bi bi-house-door me-1"></i> Inicio
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link active" href="/habitaciones">
-                  <i className="bi bi-door-closed me-1"></i> Habitaciones
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link" href="/reservas">
-                  <i className="bi bi-calendar-check me-1"></i> Reservas
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link" href="/contacto">
-                  <i className="bi bi-telephone me-1"></i> Contacto
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link" href="/login">
-                  <i className="bi bi-person-circle me-1"></i> Iniciar Sesión
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero Section - Sin clase CSS, solo estilos inline */}
       <div 
         className="text-center text-white" 
@@ -384,9 +348,9 @@ function HabitacionesView() {
 
                     {/* Botones de acción */}
                     <div className="d-grid gap-2 d-md-flex">
-                      <button 
+                      <button
                         className="btn btn-primary btn-lg flex-fill"
-                        onClick={() => setHabitacionSeleccionada(item.habitacion)}
+                        onClick={() => handleReservar(item.habitacion)}
                         disabled={!item.disponible}
                       >
                         <i className="bi bi-calendar-check me-2"></i>
@@ -445,9 +409,9 @@ function HabitacionesView() {
 
                     {/* Botones de acción */}
                     <div className="d-grid gap-2 d-md-flex">
-                      <button 
+                      <button
                         className="btn btn-primary btn-lg flex-fill"
-                        onClick={() => setHabitacionSeleccionada(item.habitacion)}
+                        onClick={() => handleReservar(item.habitacion)}
                         disabled={!item.disponible}
                       >
                         <i className="bi bi-calendar-check me-2"></i>
@@ -632,9 +596,10 @@ function HabitacionesView() {
                 >
                   Cerrar
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary btn-lg"
+                  onClick={() => handleReservar(habitacionSeleccionada)}
                   disabled={habitacionSeleccionada.estado !== "Libre"}
                 >
                   <i className="bi bi-calendar-check me-2"></i>

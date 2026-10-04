@@ -1,18 +1,31 @@
 import os
+from pathlib import Path
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from jose import jwt, JWTError
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SERVICE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(SERVICE_DIR / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "hotel_lafragua_123")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "hotel_lafragua_internal")
 
 
 def _is_auth_enabled() -> bool:
     return os.getenv("AUTH_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _get_secret_key() -> str:
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY no está configurado en las variables de entorno")
+    return SECRET_KEY
+
 
 # Configurar HTTPBearer para Swagger UI
 security = HTTPBearer(auto_error=False)
@@ -45,7 +58,7 @@ def verify_token(
             )
 
         token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, _get_secret_key(), algorithms=[ALGORITHM])
         user_identity = payload.get("sub") or payload.get("nombre_usuario") or payload.get("correo")
         if user_identity is None and payload.get("id_usuario") is not None:
             user_identity = str(payload.get("id_usuario"))
@@ -56,10 +69,39 @@ def verify_token(
                 detail="Token inválido",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return user_identity
+        return payload
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def require_admin(payload = Depends(verify_token)):
+    """Exige que el usuario autenticado tenga el rol Administrador."""
+    if not _is_auth_enabled():
+        return payload
+
+    roles = payload.get("roles", []) if isinstance(payload, dict) else []
+    if "Administrador" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requiere rol de Administrador",
+        )
+    return payload
+
+
+def generar_token_sistema() -> str:
+    """
+    Token de corta duración para llamadas entre servicios que no vienen
+    de un usuario (ej. el job de APScheduler que finaliza reservas vencidas).
+    Usa el mismo SECRET_KEY compartido, asi que los demas servicios lo
+    validan igual que un token normal.
+    """
+    payload = {
+        "sub": "reservas-service-scheduler",
+        "roles": ["Administrador"],
+        "exp": datetime.utcnow() + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, _get_secret_key(), algorithm=ALGORITHM)

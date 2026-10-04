@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { AUTH_API_BASE_URL, CLIENTES_SERVICE_URL } from "../../services/config.js";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
@@ -77,7 +78,7 @@ function RegistroCliente() {
       const nombreUsuarioGenerado = generarNombreUsuario();
       console.log(" Creando usuario con:", { nombreUsuario: nombreUsuarioGenerado, correo });
       
-      const authResponse = await axios.post("http://localhost:8086/auth/register", {
+      const authResponse = await axios.post(`${AUTH_API_BASE_URL}/register`, {
         nombre_usuario: nombreUsuarioGenerado,
         correo,
         numero_documento: Number(numeroDocumento),
@@ -88,7 +89,7 @@ function RegistroCliente() {
       console.log("✅ Usuario creado en auth-service:", authResponse.data);
 
       // 2️⃣ Login automático para obtener token
-      const loginResponse = await axios.post("http://localhost:8086/auth/login", {
+      const loginResponse = await axios.post(`${AUTH_API_BASE_URL}/login`, {
         correo: correo,
         contraseña: password
       });
@@ -109,7 +110,7 @@ function RegistroCliente() {
       
       try {
         const clienteResponse = await axios.post(
-          "http://localhost:8081/clientes/",
+          `${CLIENTES_SERVICE_URL}/clientes/`,
           {
             nombre: nombre.trim(),
             apellido: apellido.trim(),

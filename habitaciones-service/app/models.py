@@ -11,6 +11,7 @@ class Habitacion(Base):
     numero_camas = Column(Integer, nullable=False)
     precio_base = Column(DECIMAL(10,2), nullable=False)
     estado = Column(Enum('Libre', 'Ocupada', 'Limpieza', 'Mantenimiento', name='estado_enum'), nullable=False, default='Libre')
+    limpieza_hasta = Column(DateTime, nullable=True)
     comodidades = Column(JSON, nullable=True)
     foto = Column(Text, nullable=True)
 

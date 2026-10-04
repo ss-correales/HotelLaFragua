@@ -1,15 +1,19 @@
-import json
 import os
+import json
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from fastapi.security import HTTPBearer
+from dotenv import load_dotenv
 from .database import engine, Base
 from apscheduler.schedulers.background import BackgroundScheduler
 from .routers import reservas
 from .crud import actualizar_reservas_vencidas
-from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SERVICE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(SERVICE_DIR / ".env")
 
 Base.metadata.create_all(bind=engine)
 
@@ -48,11 +52,12 @@ app.openapi_components = {
 
 # Aplicar seguridad global a todos los endpoints
 app.openapi_security = [{"BearerAuth": []}]
+cors_origins = get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_cors_origins(),
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

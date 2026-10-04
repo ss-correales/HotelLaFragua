@@ -1,25 +1,13 @@
-# Build stage
-FROM node:20-alpine AS build
-
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-RUN npm ci
-
-COPY . .
-
-RUN npm run build
-
-# Production stage
 FROM node:20-alpine
 
 WORKDIR /app
 
-RUN npm install -g serve
+COPY front-web/hotel-frontend/package.json ./package.json
+COPY front-web/hotel-frontend/package-lock.json ./package-lock.json
+RUN npm install
 
-COPY --from=build /app/dist ./dist
+COPY front-web/hotel-frontend ./
 
 EXPOSE 5173
 
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
