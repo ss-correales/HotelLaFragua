@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import NavbarCliente from "../components/NavbarCliente";
+import ChatWidget from "../components/ChatWidget";
 
 function LayoutCliente() {
   const location = useLocation();
@@ -13,6 +14,7 @@ function LayoutCliente() {
       <div style={{ paddingTop }}>
         <Outlet />
       </div>
+      <ChatWidget />
     </>
   );
 }
