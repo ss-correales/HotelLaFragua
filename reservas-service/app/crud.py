@@ -18,6 +18,7 @@ load_dotenv(SERVICE_DIR / ".env")
 CLIENTES_SERVICE_URL = os.getenv("CLIENTES_SERVICE_URL", "http://localhost:8081")
 HABITACIONES_SERVICE_URL = os.getenv("HABITACIONES_SERVICE_URL", "http://localhost:8082/api")
 FACTURACION_SERVICE_URL = os.getenv("FACTURACION_SERVICE_URL", "http://localhost:8084")
+NOTIFICACIONES_SERVICE_URL = os.getenv("NOTIFICACIONES_SERVICE_URL", "http://localhost:8088")
 
 # Catálogo de servicios adicionales (valores inventados, pendiente definir precios reales)
 # por_persona=True → el precio se multiplica por (adultos + ninos) de la reserva; los bebés no pagan servicios
@@ -124,6 +125,39 @@ def contar_reservas_solapadas(db: Session, tipo_habitacion: str, fecha_inicio: d
     ).count()
 
 
+def _notificar_confirmacion_reserva(reserva: Reserva, total: float, auth_header: str | None = None) -> None:
+    """Busca el correo del cliente y dispara el correo de confirmación, sin bloquear
+    la creación de la reserva si el cliente no tiene correo o el envío falla."""
+    try:
+        response = requests.get(
+            f"{CLIENTES_SERVICE_URL}/clientes/documento/{reserva.identificacion_cliente}",
+            headers={"Authorization": auth_header or f"Bearer {generar_token_sistema()}"},
+            timeout=5,
+        )
+        if response.status_code != 200:
+            return
+        cliente = response.json()
+        correo = cliente.get("correo")
+        if not correo:
+            return
+
+        requests.post(
+            f"{NOTIFICACIONES_SERVICE_URL}/notificaciones/confirmacion-reserva",
+            json={
+                "correo": correo,
+                "nombre": cliente.get("nombre"),
+                "tipo_habitacion": reserva.tipo_habitacion,
+                "fecha_inicio": reserva.fecha_inicio.isoformat(),
+                "fecha_fin": reserva.fecha_fin.isoformat(),
+                "total": total,
+            },
+            headers={"Authorization": f"Bearer {generar_token_sistema()}"},
+            timeout=5,
+        )
+    except requests.exceptions.RequestException:
+        pass
+
+
 def crear_reserva(db: Session, reserva, canal: str = "Online", auth_header: str | None = None):
     if reserva.fecha_inicio >= reserva.fecha_fin:
         raise HTTPException(status_code=400, detail="La fecha de inicio debe ser anterior a la fecha de fin")
@@ -187,6 +221,8 @@ def crear_reserva(db: Session, reserva, canal: str = "Online", auth_header: str 
         db.delete(nueva_reserva)
         db.commit()
         raise
+
+    _notificar_confirmacion_reserva(nueva_reserva, total, auth_header)
 
     return nueva_reserva
 
