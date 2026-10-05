@@ -11,6 +11,8 @@ export const HABITACIONES_SERVICE_URL = getEnvUrl("VITE_HABITACIONES_SERVICE_URL
 export const RESERVAS_SERVICE_URL = getEnvUrl("VITE_RESERVAS_SERVICE_URL", "http://localhost:8083");
 export const FACTURACION_SERVICE_URL = getEnvUrl("VITE_FACTURACION_SERVICE_URL", "http://localhost:8084");
 export const EMPLEADOS_SERVICE_URL = getEnvUrl("VITE_EMPLEADOS_SERVICE_URL", "http://localhost:8085");
+export const CHATBOT_SERVICE_URL = getEnvUrl("VITE_CHATBOT_SERVICE_URL", "http://localhost:8087");
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 export const AUTH_API_BASE_URL = `${AUTH_SERVICE_URL}/auth`;
 export const HABITACIONES_API_BASE_URL = `${HABITACIONES_SERVICE_URL}/api`;

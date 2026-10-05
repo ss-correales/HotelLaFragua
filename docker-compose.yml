@@ -12,9 +12,14 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
       AUTH_ENABLED: ${AUTH_ENABLED:-true}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      NOTIFICACIONES_SERVICE_URL: http://notificaciones-service:8088
     volumes:
       - ./auth-service/app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8086 --reload
+    depends_on:
+      notificaciones-service:
+        condition: service_started
     ports:
       - "8086:8086"
     restart: unless-stopped
@@ -76,6 +81,7 @@ services:
       CLIENTES_SERVICE_URL: http://clientes-service:8081
       HABITACIONES_SERVICE_URL: http://habitaciones-service:8082/api
       FACTURACION_SERVICE_URL: http://facturacion-service:8084
+      NOTIFICACIONES_SERVICE_URL: http://notificaciones-service:8088
     volumes:
       - ./reservas-service/app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8083 --reload
@@ -83,6 +89,8 @@ services:
       clientes-service:
         condition: service_started
       habitaciones-service:
+        condition: service_started
+      notificaciones-service:
         condition: service_started
     ports:
       - "8083:8083"
@@ -124,6 +132,53 @@ services:
       - "8085:8085"
     restart: unless-stopped
 
+  notificaciones-service:
+    build:
+      context: .
+      dockerfile: notificaciones-service/Dockerfile
+    env_file:
+      - ./.env
+      - ./notificaciones-service/.env
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      GMAIL_USER: ${GMAIL_USER}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+      REMITENTE_NOMBRE: ${REMITENTE_NOMBRE:-Hotel La Fragua}
+    volumes:
+      - ./notificaciones-service/app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload
+    ports:
+      - "8088:8088"
+    restart: unless-stopped
+
+  chatbot-service:
+    build:
+      context: .
+      dockerfile: chatbot-service/Dockerfile
+    env_file:
+      - ./.env
+      - ./chatbot-service/.env
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      RESERVAS_SERVICE_URL: http://reservas-service:8083
+      HABITACIONES_SERVICE_URL: http://habitaciones-service:8082
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+    volumes:
+      - ./chatbot-service/app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8087 --reload
+    depends_on:
+      reservas-service:
+        condition: service_started
+      habitaciones-service:
+        condition: service_started
+    ports:
+      - "8087:8087"
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
@@ -137,6 +192,8 @@ services:
       VITE_RESERVAS_SERVICE_URL: ${VITE_RESERVAS_SERVICE_URL:-http://localhost:8083}
       VITE_FACTURACION_SERVICE_URL: ${VITE_FACTURACION_SERVICE_URL:-http://localhost:8084}
       VITE_EMPLEADOS_SERVICE_URL: ${VITE_EMPLEADOS_SERVICE_URL:-http://localhost:8085}
+      VITE_CHATBOT_SERVICE_URL: ${VITE_CHATBOT_SERVICE_URL:-http://localhost:8087}
+      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     volumes:
       - ./front-web/hotel-frontend/src:/app/src
       - ./front-web/hotel-frontend/public:/app/public
