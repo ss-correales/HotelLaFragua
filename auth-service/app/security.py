@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
@@ -15,6 +17,7 @@ load_dotenv(SERVICE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
@@ -69,6 +72,22 @@ def verify_token(
             detail="Token inválido o expirado",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def verificar_id_token_google(credential: str) -> dict:
+    """Valida el ID token que entrega el boton 'Continuar con Google' del frontend
+    y devuelve sus datos (email, given_name, family_name, etc.)."""
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El inicio de sesión con Google no está configurado en el servidor",
+        )
+    try:
+        return google_id_token.verify_oauth2_token(
+            credential, google_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de Google inválido")
 
 
 def require_admin(payload: dict = Depends(verify_token)):

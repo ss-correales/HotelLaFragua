@@ -2,6 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AUTH_API_BASE_URL, CLIENTES_SERVICE_URL } from "../../services/config.js";
+import GoogleLoginButton from "../../components/GoogleLoginButton";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
@@ -167,6 +168,30 @@ function RegistroCliente() {
     }
   };
 
+  const registrarseConGoogle = async (credential) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${AUTH_API_BASE_URL}/google`, { credential });
+      const { access_token: token, nombre: nombreGoogle, apellido: apellidoGoogle } = response.data;
+
+      localStorage.removeItem("clienteData");
+      localStorage.removeItem("usuarioCorreo");
+      localStorage.removeItem("token");
+      localStorage.setItem("token", token);
+
+      const correoToken = JSON.parse(atob(token.split(".")[1])).correo;
+      localStorage.setItem("usuarioCorreo", correoToken);
+
+      // completar-perfil se encarga de redirigir a /perfil si ya tenia cuenta creada
+      navigate("/completar-perfil", { state: { nombre: nombreGoogle, apellido: apellidoGoogle } });
+    } catch (error) {
+      console.error("❌ ERROR en registro con Google:", error.response?.data);
+      alert("No se pudo crear la cuenta con Google. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatTelefono = (value) => {
     // Formato: XXX XXX XXXX
     const cleaned = value.replace(/\s/g, '');
@@ -190,6 +215,13 @@ function RegistroCliente() {
                 <p className="text-muted">Únete a Hotel La Fragua</p>
               </div>
 
+              <GoogleLoginButton onCredential={registrarseConGoogle} texto="signup_with" />
+              <div className="d-flex align-items-center my-3">
+                <hr className="flex-grow-1" />
+                <span className="text-muted small mx-2">o regístrate con tu correo</span>
+                <hr className="flex-grow-1" />
+              </div>
+
               <form onSubmit={registrarUsuario}>
                 {/* SECCIÓN: DATOS DE ACCESO */}
                 <div className="mb-4">
@@ -211,6 +243,8 @@ function RegistroCliente() {
                           type="email"
                           className={`form-control ${errors.correo ? 'is-invalid' : ''}`}
                           id="correo"
+                          name="username"
+                          autoComplete="email"
                           placeholder="tu@email.com"
                           value={correo}
                           onChange={(e) => setCorreo(e.target.value)}
@@ -234,6 +268,8 @@ function RegistroCliente() {
                           type="password"
                           className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                           id="password"
+                          name="new-password"
+                          autoComplete="new-password"
                           placeholder="Mínimo 6 caracteres"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
@@ -255,6 +291,8 @@ function RegistroCliente() {
                           type="password"
                           className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
                           id="confirmPassword"
+                          name="confirm-password"
+                          autoComplete="new-password"
                           placeholder="Repite tu contraseña"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
@@ -286,6 +324,8 @@ function RegistroCliente() {
                           type="text"
                           className={`form-control ${errors.nombre ? 'is-invalid' : ''}`}
                           id="nombre"
+                          name="given-name"
+                          autoComplete="given-name"
                           placeholder="Juan"
                           value={nombre}
                           onChange={(e) => setNombre(e.target.value)}
@@ -307,6 +347,8 @@ function RegistroCliente() {
                           type="text"
                           className={`form-control ${errors.apellido ? 'is-invalid' : ''}`}
                           id="apellido"
+                          name="family-name"
+                          autoComplete="family-name"
                           placeholder="Pérez"
                           value={apellido}
                           onChange={(e) => setApellido(e.target.value)}
@@ -377,6 +419,8 @@ function RegistroCliente() {
                           type="tel"
                           className={`form-control ${errors.telefono ? 'is-invalid' : ''}`}
                           id="telefono"
+                          name="tel"
+                          autoComplete="tel"
                           placeholder="300 123 4567"
                           value={telefono}
                           onChange={(e) => setTelefono(formatTelefono(e.target.value))}

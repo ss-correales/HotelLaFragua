@@ -1,3 +1,5 @@
+import secrets
+
 from sqlalchemy.orm import Session, joinedload
 from .models import Usuario, Rol
 from .security import hash_password, verify_password
@@ -31,6 +33,31 @@ def crear_usuario(db: Session, usuario_data):
     db.commit()
     db.refresh(nuevo_usuario)
     return nuevo_usuario
+
+def crear_usuario_google(db: Session, correo: str, nombre: str, apellido: str):
+    """Crea un usuario nuevo a partir de un login con Google (sin contraseña propia).
+    numero_documento queda en 0 (pendiente) hasta que complete su perfil de cliente."""
+    base = f"{nombre}.{apellido}".strip(".").lower().replace(" ", "") or correo.split("@")[0]
+    nombre_usuario = base
+    sufijo = 1
+    while db.query(Usuario).filter(Usuario.nombre_usuario == nombre_usuario).first():
+        sufijo += 1
+        nombre_usuario = f"{base}{sufijo}"
+
+    nuevo_usuario = Usuario(
+        nombre_usuario=nombre_usuario,
+        correo=correo,
+        numero_documento=0,
+        contraseña_hash=hash_password(secrets.token_urlsafe(32)),
+        estado=True,
+    )
+    nuevo_usuario.roles = db.query(Rol).filter(Rol.nombre.in_(["cliente"])).all()
+
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+    return nuevo_usuario
+
 
 def obtener_usuario_por_correo(db: Session, correo: str):
     return db.query(Usuario).options(joinedload(Usuario.roles)).filter(Usuario.correo == correo).first()

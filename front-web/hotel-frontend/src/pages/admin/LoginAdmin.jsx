@@ -102,6 +102,8 @@ function LoginAdmin() {
                       type="email"
                       className="form-control"
                       id="correo"
+                      name="username"
+                      autoComplete="email"
                       placeholder="admin@hotellafragua.com"
                       value={correo}
                       onChange={(e) => setCorreo(e.target.value)}
@@ -123,6 +125,8 @@ function LoginAdmin() {
                       type="password"
                       className="form-control"
                       id="password"
+                      name="current-password"
+                      autoComplete="current-password"
                       placeholder="Ingresa tu contraseña"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}

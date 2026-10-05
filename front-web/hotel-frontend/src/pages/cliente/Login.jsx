@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AUTH_API_BASE_URL } from "../../services/config.js";
 import { getClientePorCorreo } from "../../services/clientesApi";
+import GoogleLoginButton from "../../components/GoogleLoginButton";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
@@ -72,6 +73,48 @@ function Login() {
     }
   };
 
+  const continuarConGoogle = async (credential) => {
+    setError("");
+    setLoading(true);
+    try {
+      const response = await axios.post(`${AUTH_API_BASE_URL}/google`, { credential });
+      const { access_token: token, es_nuevo, nombre, apellido } = response.data;
+
+      localStorage.removeItem("clienteData");
+      localStorage.removeItem("usuarioCorreo");
+      localStorage.removeItem("token");
+      localStorage.setItem("token", token);
+
+      // Decodificamos el correo del propio token (mismo payload que emite /auth/login)
+      const correoToken = JSON.parse(atob(token.split(".")[1])).correo;
+      localStorage.setItem("usuarioCorreo", correoToken);
+
+      if (es_nuevo) {
+        // Primera vez con Google: faltan documento y teléfono para poder reservar
+        navigate("/completar-perfil", { state: { nombre, apellido } });
+        return;
+      }
+
+      try {
+        const clienteData = await getClientePorCorreo(correoToken);
+        if (clienteData) localStorage.setItem("clienteData", JSON.stringify(clienteData));
+      } catch (clienteError) {
+        console.error("Error obteniendo datos del cliente:", clienteError);
+      }
+
+      if (redirectTo) {
+        navigate(redirectTo, { state: { tipo_habitacion: tipoHabitacion } });
+      } else {
+        navigate("/perfil");
+      }
+    } catch (err) {
+      console.error("Error en login con Google:", err);
+      setError("No se pudo iniciar sesión con Google. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container-fluid vh-100 d-flex align-items-center justify-content-center" style={{ backgroundColor: '#f8f9fa' }}>
       <div className="row w-100">
@@ -101,6 +144,8 @@ function Login() {
                       type="email"
                       className="form-control"
                       id="correo"
+                      name="username"
+                      autoComplete="email"
                       placeholder="tu@email.com"
                       value={correo}
                       onChange={(e) => setCorreo(e.target.value)}
@@ -122,6 +167,8 @@ function Login() {
                       type="password"
                       className="form-control"
                       id="password"
+                      name="current-password"
+                      autoComplete="current-password"
                       placeholder="Tu contraseña"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -153,8 +200,16 @@ function Login() {
                   )}
                 </button>
 
+                {/* GOOGLE */}
+                <div className="d-flex align-items-center my-3">
+                  <hr className="flex-grow-1" />
+                  <span className="text-muted small mx-2">o</span>
+                  <hr className="flex-grow-1" />
+                </div>
+                <GoogleLoginButton onCredential={continuarConGoogle} texto="signin_with" />
+
                 {/* LINK REGISTRO */}
-                <div className="text-center">
+                <div className="text-center mt-3">
                   <span className="text-muted">¿No tienes cuenta? </span>
                   <a href="/registro" className="text-primary text-decoration-none fw-semibold">
                     Registrarse

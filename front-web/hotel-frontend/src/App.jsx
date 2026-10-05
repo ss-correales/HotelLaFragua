@@ -13,6 +13,7 @@ import RegistroCliente from "./pages/cliente/RegistroCliente.jsx";
 import HabitacionesView from "./pages/cliente/HabitacionesView.jsx";
 import ClienteReservasView from "./pages/cliente/ReservasView.jsx";
 import MisReservasView from "./pages/cliente/MisReservasView.jsx";
+import CompletarPerfil from "./pages/cliente/CompletarPerfil.jsx";
 
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -35,6 +36,7 @@ function App() {
           <Route path="/perfil" element={<PerfilCliente />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<RegistroCliente />} />
+          <Route path="/completar-perfil" element={<CompletarPerfil />} />
         </Route>
 
         {/* Admin */}

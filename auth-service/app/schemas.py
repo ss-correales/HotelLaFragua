@@ -27,6 +27,9 @@ class UsuarioLogin(BaseModel):
     correo: str
     contraseña: str
 
+class GoogleAuthRequest(BaseModel):
+    credential: str  # ID token que entrega Google Identity Services en el frontend
+
 class UsuarioResponse(UsuarioBase):
     id_usuario: int
     estado: bool
