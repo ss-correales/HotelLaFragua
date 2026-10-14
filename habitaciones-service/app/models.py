@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Enum, DateTime, func, ForeignKey, JSON, Text
+from sqlalchemy import Column, Integer, DECIMAL, Enum, DateTime, ForeignKey, JSON, Text
 from .database import Base
 
 class Habitacion(Base):

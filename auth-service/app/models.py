@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Table, func
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -28,7 +28,7 @@ class Usuario(Base):
     numero_documento = Column(Integer, nullable=False)
     contraseña_hash = Column(String(255), nullable=False)
     estado = Column(Boolean, default=True, nullable=False)
-    fecha_creacion = Column('fecha_creacin', DateTime, server_default='CURRENT_TIMESTAMP', nullable=True)
+    fecha_creacion = Column('fecha_creacin', DateTime, server_default=func.now(), nullable=True)
 
     # Relación con roles
     roles = relationship("Rol", secondary=usuario_rol, back_populates="usuarios")

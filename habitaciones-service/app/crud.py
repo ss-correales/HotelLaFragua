@@ -117,7 +117,6 @@ def get_ocupaciones_activas(db: Session):
 # -----------------------------
 # Crear ocupación de habitación
 # -----------------------------
-from datetime import datetime
 
 
 def _parse_datetime(value):
