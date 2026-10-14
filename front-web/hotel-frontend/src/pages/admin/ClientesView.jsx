@@ -31,17 +31,6 @@ function ClientesView() {
   const cargarDatos = async () => {
     try {
       const data = await getClientes();
-      console.log("=== CLIENTES DATA ANALYSIS ===");
-      console.log("Total clientes:", data.length);
-      if (data.length > 0) {
-        console.log("First cliente fields:", Object.keys(data[0]));
-        console.log("First cliente complete:", data[0]);
-        console.log("All fields with values:");
-        Object.keys(data[0]).forEach(key => {
-          console.log(`  ${key}:`, data[0][key]);
-        });
-      }
-      console.log("=== END CLIENTES ANALYSIS ===");
       setClientes(data);
     } catch (error) {
       console.error("Error cargando clientes:", error);

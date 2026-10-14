@@ -97,17 +97,11 @@ function Habitaciones() {
         numero_habitacion: parseInt(form.numero_habitacion) || 0,
       };
       
-      console.log('Enviando datos:', formData); // Debug log
-      
       if (editing) {
-        console.log('Actualizando habitación:', editing.numero_habitacion);
-        const response = await actualizarHabitacion(editing.numero_habitacion, formData);
-        console.log('Respuesta actualización:', response);
+        await actualizarHabitacion(editing.numero_habitacion, formData);
         setEditing(null);
       } else {
-        console.log('Creando nueva habitación');
-        const response = await crearHabitacion(formData);
-        console.log('Respuesta creación:', response);
+        await crearHabitacion(formData);
       }
       
       resetForm();

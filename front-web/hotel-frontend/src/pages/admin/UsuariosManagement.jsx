@@ -147,7 +147,6 @@ function UsuariosManagement() {
   };
 
   const handleEditUsuario = (usuario) => {
-    console.log("Editando usuario:", usuario);
     setEditingUsuario(usuario);
     setFormDataUsuario({
       correo: usuario.correo,
@@ -167,10 +166,8 @@ function UsuariosManagement() {
   };
 
   const handleDeleteUsuario = async (id) => {
-    console.log("Desactivando usuario ID:", id);
     if (window.confirm("¿Estás seguro de que deseas desactivar este usuario?")) {
       try {
-        console.log("Enviando petición para desactivar usuario:", id);
         await actualizarUsuario(id, { estado: false });
         await cargarDatos();
         alert("Usuario desactivado correctamente");
@@ -182,10 +179,8 @@ function UsuariosManagement() {
   };
 
   const handleReactivarUsuario = async (id) => {
-    console.log("Reactivando usuario ID:", id);
     if (window.confirm("¿Estás seguro de que deseas reactivar este usuario?")) {
       try {
-        console.log("Enviando petición para reactivar usuario:", id);
         await actualizarUsuario(id, { estado: true });
         await cargarDatos();
         alert("Usuario reactivado correctamente");
@@ -350,10 +345,7 @@ function UsuariosManagement() {
                         <div className="btn-group" role="group">
                           <button
                             className="btn btn-sm btn-outline-primary d-flex align-items-center"
-                            onClick={() => {
-                              console.log("¡Botón Editar clickeado!");
-                              handleEditUsuario(usuario);
-                            }}
+                            onClick={() => handleEditUsuario(usuario)}
                             title="Modificar usuario"
                           >
                             <i className="bi bi-pencil-square me-1"></i>
@@ -362,10 +354,7 @@ function UsuariosManagement() {
                           {usuario.estado ? (
                             <button
                               className="btn btn-sm btn-outline-warning d-flex align-items-center ms-1"
-                              onClick={() => {
-                                console.log("¡Botón Desactivar clickeado!");
-                                handleDeleteUsuario(usuario.id_usuario);
-                              }}
+                              onClick={() => handleDeleteUsuario(usuario.id_usuario)}
                               title="Desactivar usuario"
                             >
                               <i className="bi bi-pause-circle me-1"></i>
