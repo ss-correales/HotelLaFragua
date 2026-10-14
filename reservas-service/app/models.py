@@ -1,5 +1,5 @@
 from .database import Base
-from sqlalchemy import Column, Integer, String, Date, Enum, DateTime, CheckConstraint, func, JSON
+from sqlalchemy import Column, Integer, Date, Enum, DateTime, CheckConstraint, JSON
 from datetime import datetime
 
 class Reserva(Base):

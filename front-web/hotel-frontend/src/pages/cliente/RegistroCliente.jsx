@@ -77,17 +77,14 @@ function RegistroCliente() {
     try {
       // 1️⃣ Registrar usuario en auth-service
       const nombreUsuarioGenerado = generarNombreUsuario();
-      console.log(" Creando usuario con:", { nombreUsuario: nombreUsuarioGenerado, correo });
-      
-      const authResponse = await axios.post(`${AUTH_API_BASE_URL}/register`, {
+
+      await axios.post(`${AUTH_API_BASE_URL}/register`, {
         nombre_usuario: nombreUsuarioGenerado,
         correo,
         numero_documento: Number(numeroDocumento),
         contraseña: password,
         roles: ["cliente"] // Asignar rol cliente automáticamente
       });
-      
-      console.log("✅ Usuario creado en auth-service:", authResponse.data);
 
       // 2️⃣ Login automático para obtener token
       const loginResponse = await axios.post(`${AUTH_API_BASE_URL}/login`, {
@@ -96,7 +93,6 @@ function RegistroCliente() {
       });
 
       const token = loginResponse.data.access_token;
-      console.log("✅ Login exitoso, token recibido");
 
       if (!token) {
         alert("Error en el registro. No se recibió token de autenticación.");
@@ -107,10 +103,8 @@ function RegistroCliente() {
       localStorage.setItem("usuarioCorreo", correo); // Guardar el correo para usarlo en el perfil
       
       // 3️⃣ Crear datos del cliente en clientes-service
-      console.log(" Creando cliente con:", { nombre, apellido, correo });
-      
       try {
-        const clienteResponse = await axios.post(
+        await axios.post(
           `${CLIENTES_SERVICE_URL}/clientes/`,
           {
             nombre: nombre.trim(),
@@ -127,8 +121,6 @@ function RegistroCliente() {
             }
           }
         );
-        
-        console.log("✅ Cliente creado en clientes-service:", clienteResponse.data);
       } catch (clienteError) {
         console.warn("⚠️ Error creando cliente, pero usuario ya existe:", clienteError.response?.data);
         // No lanzamos error aquí, el usuario ya fue creado en auth-service

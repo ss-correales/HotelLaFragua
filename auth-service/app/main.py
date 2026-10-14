@@ -6,6 +6,10 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 from .database import engine, Base
 from .routers import auth
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from .limiter import limiter
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SERVICE_DIR = Path(__file__).resolve().parent.parent
@@ -25,6 +29,8 @@ def get_cors_origins() -> list[str]:
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Auth Service")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 cors_origins = get_cors_origins()
 
 app.add_middleware(

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, func
+from sqlalchemy import Column, Integer, String, TIMESTAMP
 from .database import Base
 from datetime import datetime
 from zoneinfo import ZoneInfo

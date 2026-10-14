@@ -1,7 +1,14 @@
 import os
 import unicodedata
+from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SERVICE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(SERVICE_DIR / ".env")
 
 
 def _normalizar(texto: str) -> str:

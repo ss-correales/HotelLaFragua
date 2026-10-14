@@ -51,7 +51,6 @@ function HabitacionesView() {
 
   const handleBuscar = () => {
     // La búsqueda se aplica automáticamente con los filtros actuales
-    console.log("Aplicando filtros:", filtro);
   };
 
   const handleLimpiarFiltros = () => {
@@ -61,7 +60,6 @@ function HabitacionesView() {
       precioMin: "",
       precioMax: ""
     });
-    console.log("Filtros limpiados");
   };
 
   const habitacionesFiltradas = habitaciones.filter(habitacion => {
@@ -515,44 +513,28 @@ function HabitacionesView() {
                     <div className="d-flex flex-wrap gap-2">
                       {(() => {
                         let comodidades = habitacionSeleccionada.comodidades || [];
-                        
-                        // Debug: mostrar qué datos vienen
-                        console.log("Comodidades originales:", comodidades);
-                        console.log("Tipo de comodidades:", typeof comodidades);
-                        console.log("Es array:", Array.isArray(comodidades));
-                        
-                        // Si es un string, intentar convertirlo a array
+
+                        // El backend a veces devuelve las comodidades como JSON serializado en texto
                         if (typeof comodidades === 'string') {
-                          console.log("Intentando parsear string:", comodidades);
                           try {
                             comodidades = JSON.parse(comodidades);
-                            console.log("Parse exitoso:", comodidades);
-                          } catch (e) {
-                            console.log("Error parseando JSON:", e);
-                            // Si no es JSON válido, mostrar array vacío
+                          } catch {
                             comodidades = [];
                           }
                         }
-                        
-                        // Asegurar que sea un array
+
                         if (!Array.isArray(comodidades)) {
-                          console.log("No es array, convirtiendo a array vacío");
                           comodidades = [];
                         }
-                        
-                        console.log("Comodidades finales:", comodidades);
-                        
+
                         return comodidades.length > 0 ? (
                           comodidades
                             .filter(comodidadId => comodidadId && comodidadId !== 'string' && typeof comodidadId === 'string')
-                            .map((comodidadId, index) => {
-                              console.log("Procesando comodidad válida:", comodidadId, typeof comodidadId);
-                              return (
-                                <span key={index} className="badge bg-light text-dark p-2">
-                                  {getComodidadIcon(comodidadId)} {getComodidadLabel(comodidadId)}
-                                </span>
-                              );
-                            })
+                            .map((comodidadId, index) => (
+                              <span key={index} className="badge bg-light text-dark p-2">
+                                {getComodidadIcon(comodidadId)} {getComodidadLabel(comodidadId)}
+                              </span>
+                            ))
                         ) : (
                           <span className="text-muted">No hay comodidades registradas</span>
                         );

@@ -8,7 +8,6 @@ usuariosApi.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      console.log("Token expirado o inválido, redirigiendo al login");
       localStorage.removeItem("token");
       window.location.href = "/login";
     }

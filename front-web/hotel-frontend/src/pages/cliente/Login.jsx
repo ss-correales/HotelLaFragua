@@ -49,9 +49,7 @@ function Login() {
         const clienteData = await getClientePorCorreo(correo);
         
         if (clienteData) {
-          // Guardar datos completos del cliente
           localStorage.setItem("clienteData", JSON.stringify(clienteData));
-          console.log("Datos del cliente guardados:", clienteData);
         }
       } catch (clienteError) {
         console.error("Error obteniendo datos del cliente:", clienteError);
