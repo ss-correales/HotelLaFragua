@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, backend, frontend]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        servicio: [auth-service, reservas-service, habitaciones-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        working-directory: ${{ matrix.servicio }}
+        run: pip install -r requirements.txt
+
+      - name: Correr tests
+        working-directory: ${{ matrix.servicio }}
+        env:
+          SECRET_KEY: clave-de-ci-no-es-secreta-de-verdad
+          AUTH_ENABLED: "false"
+        run: pytest -v
