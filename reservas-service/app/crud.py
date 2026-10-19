@@ -19,7 +19,7 @@ CLIENTES_SERVICE_URL = os.getenv("CLIENTES_SERVICE_URL", "http://localhost:8081"
 HABITACIONES_SERVICE_URL = os.getenv("HABITACIONES_SERVICE_URL", "http://localhost:8082/api")
 FACTURACION_SERVICE_URL = os.getenv("FACTURACION_SERVICE_URL", "http://localhost:8084")
 
-# Catálogo de servicios adicionales (precios en COP, de referencia, confirmar con la administración del hotel)
+# Catálogo de servicios adicionales (precios en COP)
 # por_persona=True → el precio se multiplica por (adultos + ninos) de la reserva; los bebés no pagan servicios
 # El desayuno viene incluido en el precio de la habitación, no es un servicio aparte.
 # El restaurante (almuerzo/cena) se paga directo con el personal del hotel, fuera de este sistema.
