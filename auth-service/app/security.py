@@ -48,7 +48,7 @@ def create_access_token(data: dict):
 
 def verify_token(
     token: str | None = None,
-    request: Request | None = None,
+    request: Request = None,
     credentials: HTTPAuthorizationCredentials | None = Depends(security)
 ):
     """Valida un JWT y retorna los datos del usuario"""
