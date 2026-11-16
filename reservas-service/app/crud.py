@@ -20,17 +20,17 @@ HABITACIONES_SERVICE_URL = os.getenv("HABITACIONES_SERVICE_URL", "http://localho
 FACTURACION_SERVICE_URL = os.getenv("FACTURACION_SERVICE_URL", "http://localhost:8084")
 NOTIFICACIONES_SERVICE_URL = os.getenv("NOTIFICACIONES_SERVICE_URL", "http://localhost:8088")
 
-# Catálogo de servicios adicionales (valores inventados, pendiente definir precios reales)
+# Catálogo de servicios adicionales (precios en COP)
 # por_persona=True → el precio se multiplica por (adultos + ninos) de la reserva; los bebés no pagan servicios
 # El desayuno viene incluido en el precio de la habitación, no es un servicio aparte.
 # El restaurante (almuerzo/cena) se paga directo con el personal del hotel, fuera de este sistema.
 SERVICIOS_ADICIONALES = {
-    "Acceso a spa": {"precio": 40000, "categoria": "Gastronomía y bienestar", "por_persona": False},
-    "Masaje relajante": {"precio": 80000, "categoria": "Gastronomía y bienestar", "por_persona": True},
-    "Clase de yoga": {"precio": 30000, "categoria": "Gastronomía y bienestar", "por_persona": True},
-    "Paseo por el centro histórico": {"precio": 35000, "categoria": "Actividades y experiencias", "por_persona": True},
-    "Paseos rurales y miradores": {"precio": 50000, "categoria": "Actividades y experiencias", "por_persona": True},
-    "Rutas gastronómicas del pueblo": {"precio": 45000, "categoria": "Actividades y experiencias", "por_persona": True},
+    "Acceso a spa": {"precio": 50000, "categoria": "Gastronomía y bienestar", "por_persona": False},
+    "Masaje relajante": {"precio": 120000, "categoria": "Gastronomía y bienestar", "por_persona": True},
+    "Clase de yoga": {"precio": 35000, "categoria": "Gastronomía y bienestar", "por_persona": True},
+    "Paseo por el centro histórico": {"precio": 40000, "categoria": "Actividades y experiencias", "por_persona": True},
+    "Paseos rurales y miradores": {"precio": 60000, "categoria": "Actividades y experiencias", "por_persona": True},
+    "Rutas gastronómicas del pueblo": {"precio": 70000, "categoria": "Actividades y experiencias", "por_persona": True},
 }
 
 TARIFA_NINO = 0.5  # los niños (3-10 años) pagan la mitad de la tarifa de adulto; bebés (0-2) no pagan
