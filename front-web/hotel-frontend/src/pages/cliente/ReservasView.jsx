@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { crearReserva, getServiciosAdicionales } from "../../services/reservasApi";
+import { crearReserva, getServiciosAdicionales, iniciarPagoWompi } from "../../services/reservasApi";
 import { getHabitaciones } from "../../services/habitacionesApi";
 import DatePicker from "react-datepicker";
 import { registerLocale, setDefaultLocale } from "react-datepicker";
@@ -53,6 +53,8 @@ function ReservasView() {
 
   const [loading, setLoading] = useState(false);
   const [reservaSuccess, setReservaSuccess] = useState(false);
+  const [reservaCreada, setReservaCreada] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const [habitaciones, setHabitaciones] = useState([]);
   const [serviciosDisponibles, setServiciosDisponibles] = useState([]);
@@ -172,7 +174,8 @@ function ReservasView() {
         servicios_adicionales: serviciosSeleccionados
       };
 
-      await crearReserva(reservaData);
+      const nuevaReserva = await crearReserva(reservaData);
+      setReservaCreada(nuevaReserva);
       setReservaSuccess(true);
 
       // Resetear formulario
@@ -191,6 +194,42 @@ function ReservasView() {
       alert('Error al crear la reserva: ' + (error.response?.data?.detail || 'Intenta nuevamente'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePagarConWompi = async () => {
+    if (!reservaCreada) return;
+    setPaymentLoading(true);
+    try {
+      const checkout = await iniciarPagoWompi(reservaCreada.id_reserva);
+      const form = document.createElement("form");
+      form.method = "GET";
+      form.action = "https://checkout.wompi.co/p/";
+      const fields = {
+        "public-key": checkout.public_key,
+        currency: checkout.currency,
+        "amount-in-cents": checkout.amount_in_cents,
+        reference: checkout.reference,
+        "signature:integrity": checkout.integrity_signature,
+      };
+      // Wompi rechaza http://localhost en redirect-url (CloudFront 403).
+      if (checkout.redirect_url) {
+        fields["redirect-url"] = checkout.redirect_url;
+      }
+      Object.entries(fields).forEach(([name, value]) => {
+        if (value === undefined || value === null || value === "") return;
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error) {
+      console.error("Error iniciando pago Wompi:", error);
+      alert(error.response?.data?.detail || "No fue posible iniciar el pago. Intenta nuevamente.");
+      setPaymentLoading(false);
     }
   };
 
@@ -237,22 +276,45 @@ function ReservasView() {
             <div className="display-1 mb-4">
               <i className="bi bi-check-circle"></i>
             </div>
-            <h1 className="display-4 fw-bold mb-3">¡Reserva Confirmada!</h1>
+            <h1 className="display-4 fw-bold mb-3">¡Reserva creada!</h1>
             <p className="lead mb-4">
-              Tu reserva ha sido creada exitosamente. Ya puedes ver todos los detalles en "Mis Reservas".
+              Completa el pago con Wompi para confirmar tu reserva.
             </p>
-            <div className="d-flex gap-3 justify-content-center">
+            <div className="d-flex flex-column align-items-center gap-3">
               <button
-                className="btn btn-primary btn-lg"
-                onClick={() => setReservaSuccess(false)}
+                type="button"
+                className="btn btn-lg px-5"
+                onClick={handlePagarConWompi}
+                disabled={paymentLoading}
+                style={{
+                  backgroundColor: "#A67C52",
+                  borderColor: "#A67C52",
+                  color: "#fff",
+                  fontWeight: 700,
+                  minWidth: "260px",
+                }}
               >
-                <i className="bi bi-calendar-plus me-2"></i>
-                Hacer otra reserva
+                <i className="bi bi-credit-card me-2"></i>
+                {paymentLoading ? "Preparando pago..." : "Pagar con Wompi"}
               </button>
-              <button className="btn btn-outline-light btn-lg" onClick={() => navigate("/mis-reservas")}>
-                <i className="bi bi-suitcase me-2"></i>
-                Ver mis reservas
-              </button>
+              <div className="d-flex flex-wrap gap-2 justify-content-center">
+                <button
+                  type="button"
+                  className="btn btn-outline-light"
+                  onClick={() => setReservaSuccess(false)}
+                >
+                  <i className="bi bi-calendar-plus me-2"></i>
+                  Hacer otra reserva
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-light"
+                  onClick={() => navigate("/mis-reservas")}
+                >
+                  <i className="bi bi-suitcase me-2"></i>
+                  Ver mis reservas
+                </button>
+              </div>
             </div>
           </div>
         </div>

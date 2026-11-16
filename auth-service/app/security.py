@@ -6,7 +6,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -18,13 +18,14 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "hotel_lafragua_internal")
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
 
 def _is_auth_enabled() -> bool:
-    return os.getenv("AUTH_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("AUTH_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _get_secret_key() -> str:
@@ -47,11 +48,15 @@ def create_access_token(data: dict):
 
 def verify_token(
     token: str | None = None,
+    request: Request | None = None,
     credentials: HTTPAuthorizationCredentials | None = Depends(security)
 ):
     """Valida un JWT y retorna los datos del usuario"""
     if not _is_auth_enabled():
         return {"sub": "auth-disabled"}
+
+    if request is not None and request.headers.get("X-Internal-Token") == INTERNAL_SERVICE_TOKEN:
+        return {"sub": "internal-service"}
 
     if token is None and credentials is not None:
         token = credentials.credentials

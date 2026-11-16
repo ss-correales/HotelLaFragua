@@ -16,21 +16,26 @@ SERVICE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 load_dotenv(SERVICE_DIR / ".env")
 
-
-def get_cors_origins() -> list[str]:
-    raw_origins = os.getenv("CORS_ORIGINS", "*").strip()
-    if raw_origins == "*":
-        return ["*"]
-    if raw_origins.startswith("["):
-        return [origin.strip() for origin in json.loads(raw_origins) if origin.strip()]
-    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
-
-
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Habitaciones Service"
 )
+
+
+def get_cors_origins() -> list[str]:
+    raw_origins = os.getenv("CORS_ORIGINS", "")
+    if not raw_origins:
+        return ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"]
+
+    try:
+        origins = json.loads(raw_origins)
+        if isinstance(origins, list) and origins:
+            return origins
+    except json.JSONDecodeError:
+        pass
+
+    return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
 # Configurar seguridad para Swagger
 security = HTTPBearer()

@@ -45,6 +45,7 @@ def register(usuario: schemas.UsuarioCreate, db=Depends(get_db)):
         "id_usuario": nuevo.id_usuario,
         "nombre_usuario": nuevo.nombre_usuario,
         "correo": nuevo.correo,
+        "numero_documento": nuevo.numero_documento,
         "estado": nuevo.estado,
         "roles": [rol.nombre for rol in nuevo.roles]
     }
@@ -62,6 +63,7 @@ def login(request: Request, datos: schemas.UsuarioLogin, db: Session = Depends(g
         "id_usuario": usuario.id_usuario,
         "nombre_usuario": usuario.nombre_usuario,
         "correo": usuario.correo,
+        "numero_documento": usuario.numero_documento,
         "roles": [rol.nombre for rol in usuario.roles]
     })
 

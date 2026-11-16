@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from jose import jwt, JWTError
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SERVICE_DIR = Path(__file__).resolve().parent.parent
@@ -12,10 +13,11 @@ load_dotenv(SERVICE_DIR / ".env")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
+INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "hotel_lafragua_internal")
 
 
 def _is_auth_enabled() -> bool:
-    return os.getenv("AUTH_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("AUTH_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _get_secret_key() -> str:
@@ -27,7 +29,10 @@ def _get_secret_key() -> str:
 # Configurar HTTPBearer para Swagger UI
 security = HTTPBearer(auto_error=False)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     """
     Valida el token JWT usando HTTPBearer.
     Se usa como dependencia en los endpoints protegidos.
@@ -39,6 +44,9 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     if not _is_auth_enabled():
         return "auth-disabled"
+
+    if request.headers.get("X-Internal-Token") == INTERNAL_SERVICE_TOKEN:
+        return "internal-service"
 
     try:
         if credentials is None:

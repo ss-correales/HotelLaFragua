@@ -22,3 +22,11 @@ export {
   eliminarUsuario, 
   getRoles 
 } from './usuariosApi.js';
+
+export {
+  getEmpleados,
+  getEmpleado,
+  crearEmpleado,
+  actualizarEmpleado,
+  eliminarEmpleado
+} from './empleadosApi.js';

@@ -19,6 +19,11 @@ export const crearReserva = async (reserva) => {
   return response.data;
 };
 
+export const iniciarPagoWompi = async (idReserva) => {
+  const response = await api.post(`/reservas/${idReserva}/pago/wompi/checkout`);
+  return response.data;
+};
+
 export const getMisReservas = async () => {
   const response = await api.get("/reservas/mias");
   return response.data;

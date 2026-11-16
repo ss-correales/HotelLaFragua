@@ -86,6 +86,8 @@ def actualizar_usuario(db: Session, id_usuario: int, usuario_update):
         usuario.nombre_usuario = usuario_update.nombre_usuario
     if usuario_update.correo is not None:
         usuario.correo = usuario_update.correo
+    if usuario_update.numero_documento is not None:
+        usuario.numero_documento = usuario_update.numero_documento
     if usuario_update.estado is not None:
         usuario.estado = usuario_update.estado
 

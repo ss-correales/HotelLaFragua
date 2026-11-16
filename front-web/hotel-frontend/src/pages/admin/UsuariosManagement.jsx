@@ -18,6 +18,7 @@ function UsuariosManagement() {
   const [searchUsuario, setSearchUsuario] = useState("");
   const [formDataUsuario, setFormDataUsuario] = useState({
     correo: "",
+    numero_documento: "",
     contraseña: "",
     roles: [],
     estado: true,
@@ -77,6 +78,7 @@ function UsuariosManagement() {
       if (editingUsuario) {
         const usuarioData = {
           correo: formDataUsuario.correo,
+          numero_documento: Number(formDataUsuario.numero_documento),
           roles: formDataUsuario.roles,
           estado: formDataUsuario.estado,
           numero_identificacion: formDataUsuario.numero_identificacion
@@ -118,6 +120,7 @@ function UsuariosManagement() {
         const usuarioData = {
           nombre_usuario: nombreUsuarioFinal,
           correo: formDataUsuario.correo,
+          numero_documento: Number(formDataUsuario.numero_documento),
           contraseña: formDataUsuario.contraseña,
           roles: formDataUsuario.roles,
           estado: formDataUsuario.estado,
@@ -150,6 +153,7 @@ function UsuariosManagement() {
     setEditingUsuario(usuario);
     setFormDataUsuario({
       correo: usuario.correo,
+      numero_documento: usuario.numero_documento || "",
       contraseña: "",
       roles: usuario.roles ? usuario.roles.map(rol => rol.nombre) : [],
       estado: usuario.estado,
@@ -194,6 +198,7 @@ function UsuariosManagement() {
   const resetForm = () => {
     setFormDataUsuario({
       correo: "",
+      numero_documento: "",
       contraseña: "",
       roles: [],
       estado: true,

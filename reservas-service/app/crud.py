@@ -80,7 +80,11 @@ def es_dueno_de_reserva(correo: str, identificacion_cliente: int, auth_header: s
 
 def obtener_habitaciones_por_tipo(tipo_habitacion: str) -> List[Dict]:
     try:
-        response = requests.get(f"{HABITACIONES_SERVICE_URL}/habitaciones", timeout=5)
+        response = requests.get(
+            f"{HABITACIONES_SERVICE_URL}/api/habitaciones",
+            headers={"Authorization": f"Bearer {generar_token_sistema()}"},
+            timeout=5,
+        )
     except requests.exceptions.RequestException:
         raise HTTPException(status_code=503, detail="Servicio de habitaciones no disponible")
 
@@ -314,7 +318,7 @@ def checkin_reserva(db: Session, id_reserva: int, current_user: dict, numero_hab
 
     try:
         response = requests.put(
-            f"{HABITACIONES_SERVICE_URL}/habitaciones/{numero_habitacion}",
+            f"{HABITACIONES_SERVICE_URL}/api/habitaciones/{numero_habitacion}",
             json={"estado": "Ocupada"},
             headers={"Authorization": f"Bearer {generar_token_sistema()}"},
             timeout=5,
